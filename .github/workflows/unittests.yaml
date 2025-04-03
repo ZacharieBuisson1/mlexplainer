@@ -1,0 +1,46 @@
+name: unittests
+
+on:
+    push:
+        branches:
+            - 'dev*'
+            - 'feature/**'
+    pull_request:
+        branches:
+            - main
+        
+
+jobs:
+  pytest_push:
+    runs-on: ubuntu-latest
+
+    # runs only on push
+    if: ${{ github.event_name == 'push' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.7.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root --all-extras --without codequality
+
+      - name: Run tests
+        run: |
+          poetry run coverage run -m unittest discover ./tests -t .
+
+
+
