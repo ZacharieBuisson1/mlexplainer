@@ -35,6 +35,9 @@ jobs:
           virtualenvs-in-project: true
           installer-parallel: true
 
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root --all-extras 
+
       - name: Run tests
         run: |
           poetry run coverage run -m unittest discover ./tests -t .
