@@ -11,7 +11,7 @@ on:
         
 
 jobs:
-  pytest_push:
+  unittest_push:
     runs-on: ubuntu-latest
 
     # runs only on push
@@ -42,7 +42,7 @@ jobs:
         run: |
           poetry run coverage run -m unittest discover ./tests -t .
 
-  pytest_pull:
+  unittest_pull:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
