@@ -2,7 +2,7 @@
 name = "mlexplainer"
 version = "0.1.0"
 description = ""
-authors = ["ZacharieBuisson1 <109354189+ZacharieBuisson1@users.noreply.github.com>"]
+authors = ["ZacharieBUISSON <zacharie.buisson@orange.fr>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
