@@ -1,6 +1,6 @@
 from unittest import main, TestCase
 
-from numpy import array, inf, NaN
+from numpy import array, inf, nan
 from pandas import DataFrame, Series
 
 from mlexplainer.shap_explainer.utils_shap_explainer.utils import (
@@ -50,7 +50,7 @@ class TestShapExplainer(TestCase):
 
     def test_value_is_na(self):
         """TEST - Test the is_in_quantile function with a value that is NA."""
-        self.assertEqual(is_in_quantile(NaN, [10, 20, 30]), -1)
+        self.assertEqual(is_in_quantile(nan, [10, 20, 30]), -1)
 
     def test_empty_quantile_list(self):
         """TEST - Test the is_in_quantile function with an empty quantile list."""
