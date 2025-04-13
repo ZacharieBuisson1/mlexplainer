@@ -28,7 +28,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = {"" = "mlexplainer"}
 
 [tool.poetry.urls]
 repository = "https://github.com/ZacharieBuisson1/mlexplainer"
