@@ -2,9 +2,8 @@ name: Upload Python Package (test Pypi)
 
 on:
     push:
-        branches:
-            - 'dev*'
-            - 'feature/**'
+        branches-ignore:
+            - '**'
 
 permissions:
   contents: read
