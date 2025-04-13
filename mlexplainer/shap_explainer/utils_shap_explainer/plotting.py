@@ -3,7 +3,7 @@ from numpy import nan
 
 from matplotlib import ticker
 
-from utils import group_values
+from .utils import group_values
 
 
 def creneau(x: DataFrame, xmin: float, xmax: float) -> DataFrame:

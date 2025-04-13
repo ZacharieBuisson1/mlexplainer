@@ -54,7 +54,6 @@ def is_interpretation_consistent(
                 modality: "above" if mean > ymean_train else "below"
                 for modality, mean in modality_means.items()
             }
-            print(observed_interpretation)
 
     if shap_values is not None:
 
@@ -74,7 +73,6 @@ def is_interpretation_consistent(
                 modality: "above" if mean > 0 else "below"
                 for modality, mean in shap_means.items()
             }
-            print("SHAP category comparison:", shap_interpretation)
 
     if observed_interpretation is not None and shap_values is not None:
         differences = sum(
