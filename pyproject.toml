@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mlexplainer"
-version = "0.1.1"
+version = "0.1.3"
 description = "Advanced ML explanation library for data scientists using modern frameworks."
 authors = ["ZacharieBUISSON <zacharie.buisson@orange.fr>"]
 readme = "README.md"
