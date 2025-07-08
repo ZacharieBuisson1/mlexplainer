@@ -1,30 +1,40 @@
 """Shap Wrapper for Models."""
 
+from typing import Callable
+
 from pandas import DataFrame
 from shap import TreeExplainer
 
 
-def calculate_shap_values_tree_models(
-    model: object,
-    x_train: DataFrame,
-    selected_features: list[str],
-    model_output: str = "raw",
-) -> tuple:
-    """Calculate SHAP values for a given feature using the provided model.
+class ShapWrapper:
+    """Shapley's values wrapper for models, based on TreeExplainer."""
 
-    Args:
-        model (object): The trained model to use for SHAP value calculation.
-        x_train (DataFrame): Training feature values.
-        selected_features (list[str]): List of selected feature names.
-        feature (str): The feature name to calculate SHAP values for.
+    def __init__(self, model: Callable, model_output: str = "raw"):
+        """Initialize the ShapWrapper with a model.
 
-    Returns:
-        tuple: A tuple containing SHAP values for training and test sets.
-    """
-    # Ensure the feature is present in both training and test sets
-    shap_margin_explainer = TreeExplainer(
-        model=model, model_output=model_output
-    )
-    shap_values = shap_margin_explainer.shap_values(x_train[selected_features])
+        Args:
+            model (Callable): The model to be wrapped for SHAP value calculation.
+            model_output (str): The type of output from the model, e.g., "raw", "probability".
+        """
+        self.model = model
+        self.model_output = model_output
 
-    return shap_values
+        self.shap_margin_explainer = TreeExplainer(
+            model=self.model, model_output=self.model_output
+        )
+
+    def calculate(
+        self, dataframe: DataFrame, features: list[str]
+    ) -> DataFrame:
+        """Transform the input DataFrame to calculate SHAP values.
+        Args:
+            dataframe (DataFrame): The input DataFrame containing features.
+            features (list[str]): List of feature names to calculate SHAP values for.
+        Returns:
+            DataFrame: A DataFrame containing SHAP values for the specified features.
+        """
+        # Example: calculate SHAP values for X using the model
+        shap_values = self.shap_margin_explainer.shap_values(
+            dataframe[features]
+        )
+        return shap_values
