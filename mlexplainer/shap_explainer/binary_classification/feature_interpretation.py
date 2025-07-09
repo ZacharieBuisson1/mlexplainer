@@ -5,11 +5,11 @@ from numpy import ndarray
 
 import matplotlib.pyplot as plt
 
-from ..utils_shap_explainer.plotting import (
+from ..plots.plotting import (
     plot_feature_target,
     features_shap_plot,
 )
-from ..utils_shap_explainer.utils import (
+from ..plots.utils import (
     get_index_of_features,
     target_groupby_category,
 )

@@ -2,8 +2,13 @@ from pandas import concat, DataFrame, Series
 from numpy import nan
 
 from matplotlib import ticker
+from matplotlib.axes import Axes
 
-from .utils import group_values
+from mlexplainer.shap_explainer.plots.utils import (
+    get_index_of_features,
+    group_values,
+    target_groupby_category,
+)
 
 
 def creneau(x: DataFrame, xmin: float, xmax: float) -> DataFrame:
@@ -43,7 +48,7 @@ def creneau(x: DataFrame, xmin: float, xmax: float) -> DataFrame:
 
 def add_nans(
     nan_observation: DataFrame, xmin: float, delta: float, ax, color: tuple
-) -> None:
+) -> Axes:
     """Plot missing values on the given axis.
 
     Args:
@@ -52,6 +57,8 @@ def add_nans(
         delta (float): Delta value for adjusting plot limits.
         ax: Matplotlib axis to plot on.
         color (tuple): Color for plotting missing values.
+    Returns:
+        Axes: Matplotlib axis with missing values plotted.
     """
     if nan_observation.shape[0] > 0:
         # Fill NaN values with a value to plot
@@ -71,9 +78,54 @@ def add_nans(
     return ax
 
 
-def plot_feature_target(
-    x: Series, y: Series, q: int, ax, delta: float, ymean: float
-) -> tuple:
+def plot_feature_target_numerical_binary(
+    dataframe: DataFrame,
+    target_serie: Series,
+    feature: str,
+    q: int,
+    ax: Axes,
+    delta: float,
+) -> Axes:
+    """Plot the relationship between a feature and the target variable for binary classification.
+    Args:
+        dataframe (DataFrame): DataFrame containing the feature and target variable.
+        target_serie (Series): Series representing the target variable.
+        feature (str): The feature name to plot.
+        q (int): Number of quantiles.
+        ax (Axes): Matplotlib axis to plot on.
+        delta (float): Delta value for adjusting plot limits.
+    Returns:
+        Axes: Matplotlib axis with the feature-target plot.
+    """
+
+    ax, used_q = plot_feature_numerical_target(
+        dataframe[feature],
+        target_serie,
+        q,
+        ax,
+        delta,
+        target_serie.mean(),
+    )
+
+    # set up a label for the feature
+    feature_label = feature
+    if used_q is not None:
+        feature_label = f"{feature_label}, q={used_q}"
+
+    ax.set_xlabel(feature_label, fontsize="large")
+
+    return ax
+
+
+def plot_feature_numerical_target(
+    x: Series,
+    y: Series,
+    q: int,
+    ax,
+    delta: float,
+    ymean: float,
+    color: tuple[float, float, float] = (0.28, 0.18, 0.71),
+) -> tuple[Axes, int | None]:
     """Plot the relationship between a feature and the target variable.
 
     Args:
@@ -87,7 +139,6 @@ def plot_feature_target(
     Returns:
         tuple: Matplotlib axis and used quantiles.
     """
-    color = (0.28, 0.18, 0.71)  # Define purple color
 
     xmin, xmax = x.min(), x.max()  # Define observed min and max
 
@@ -140,81 +191,60 @@ def plot_feature_target(
     return ax, used_q
 
 
-def features_shap_plot(
-    X: DataFrame,
-    feature_shap_values: Series,
-    ax1,
-    ax2,
-    delta: float,
-    type_of_shap: str = "train",
+def plot_feature_target_categorical_binary(
+    dataframe: DataFrame,
+    target: Series,
+    feature: str,
+    ax: Axes,
+    color: tuple[float, float, float] = (0.28, 0.18, 0.71),
 ):
-    """Plot SHAP values for features.
 
-    Args:
-        X (DataFrame): Feature values.
-        feature_shap_values (Series): SHAP values for the features.
-        ax1 (Axes): Matplotlib axis for the main plot.
-        ax2 (Axes): Matplotlib axis for the SHAP plot.
-        delta (float): Delta value for adjusting plot limits.
-        type_of_shap (str): Type of SHAP values ("train" or "test").
+    feature_train = dataframe[feature].copy()
+    mean_target = target.mean()
 
-    Returns:
-        tuple: Matplotlib axes for the main plot and SHAP plot.
-    """
-    # Fill NaN values to plot
-    feature_values = X.fillna(X.min() - delta / 2)
-
-    if type_of_shap == "train":
-        shap_color = [(0.12, 0.53, 0.9), (1.0, 0.5, 0.34)]
-    elif type_of_shap == "test":
-        shap_color = [(0, 0, 0), (0, 0, 0)]
-    else:
-        raise ValueError("Invalid type_of_shap value. Use 'train' or 'test'.")
-
-    colors = [shap_color[int(u > 0)] for u in feature_shap_values]
-
-    ax2.scatter(
-        feature_values,
-        feature_shap_values,
-        c=colors,
-        s=2,
-        alpha=1,
-        marker="x" if type_of_shap == "test" else "o",
+    # First part - printing information for observed values
+    stats_to_plot = target_groupby_category(dataframe, feature, target)
+    ax.plot(
+        stats_to_plot["group"],
+        stats_to_plot["mean_target"],
+        "o",
+        color=color,
+    )
+    num_categories = feature_train.value_counts().shape[0]
+    ax.hlines(
+        mean_target,
+        -0.5,
+        num_categories - 0.5,
+        linestyle="--",
+        color=color,
     )
 
-    ax2.tick_params(axis="y", labelsize="large")
-    ax2.text(
-        x=1.05,
-        y=0.8,
-        s="Impact à la hausse",
-        fontsize="large",
-        rotation=90,
-        ha="left",
-        va="center",
-        transform=ax2.transAxes,
-        color=shap_color[1],
-    )
-    ax2.text(
-        x=1.05,
-        y=0.2,
-        s="Impact à la baisse",
-        fontsize="large",
-        rotation=90,
-        ha="left",
-        va="center",
-        transform=ax2.transAxes,
-        color=shap_color[0],
-    )
-    ax2.text(
-        x=1.1,
-        y=0.5,
-        s="Valeurs de Shapley",
-        fontsize="large",
-        rotation=90,
-        ha="left",
-        va="center",
-        transform=ax2.transAxes,
-        color="black",
+    # Determine the center points
+    primary_center = target.mean()
+    primary_ymin, primary_ymax = ax.get_ylim()
+
+    # Calculate the maximum range to ensure symmetry
+    max_primary_offset = max(
+        primary_center - primary_ymin, primary_ymax - primary_center
     )
 
-    return ax1, ax2
+    # Set the limits for the primary y-axis (centered around ymean_train)
+    ax.set_ylim(
+        primary_center - max_primary_offset,
+        primary_center + max_primary_offset,
+    )
+
+    # Transform tick to percent
+    ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
+
+    # Change the label
+    ax.set_ylabel("Taux de cible", fontsize="large", color=color)
+
+    # Change size of ticks
+    ax.tick_params(axis="y", labelsize="large")
+
+    # Change color of ticks
+    for tick in ax.get_yticklabels():
+        tick.set_color(color)
+
+    return ax

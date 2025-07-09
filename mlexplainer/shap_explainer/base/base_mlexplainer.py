@@ -5,6 +5,7 @@ from pandas import DataFrame, Series
 
 
 class BaseMLExplainer(ABC):
+    """Base class for Machine Learning Explainers."""
 
     def __init__(
         self,
@@ -13,6 +14,19 @@ class BaseMLExplainer(ABC):
         features: List[str],
         model: Callable,
     ):
+        """
+        Initialize the BaseMLExplainer with training data, features, and model.
+        Args:
+            x_train (DataFrame): Training feature values.
+            y_train (Series): Training target values.
+            features (List[str]): List of feature names to interpret.
+            model (Callable): The machine learning model to explain.
+        Raises:
+            ValueError: If x_train or y_train is None, or if features are not provided
+                        or not present in x_train.
+            ValueError: If any feature in features is not present in x_train.
+            ValueError: If no features are provided.
+        """
 
         self.x_train = x_train
         self.y_train = y_train
@@ -32,8 +46,6 @@ class BaseMLExplainer(ABC):
             col for col in x_train.columns if x_train[col].dtype == "object"
         ]
 
-    def __post_init__(self):
-        """Post-initialization method to be overridden by subclasses."""
         if self.x_train is None or self.y_train is None:
             raise ValueError("X_train and y_train must be provided.")
 
@@ -49,5 +61,8 @@ class BaseMLExplainer(ABC):
             )
 
     @abstractmethod
-    def interpret_features(self, **kwargs: Any) -> None:
+    def explain(self, **kwargs: Any) -> None:
+        """Interpret features for the machine learning model.
+        This method should be implemented in subclasses to provide specific interpretations.
+        """
         pass

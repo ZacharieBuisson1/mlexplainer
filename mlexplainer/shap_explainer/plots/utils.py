@@ -1,4 +1,4 @@
-from pandas import DataFrame, isna, merge, notna, qcut, Series
+from pandas import concat, DataFrame, isna, merge, notna, qcut, Series
 from numpy import arange, inf, isclose, nan
 
 
@@ -150,7 +150,9 @@ def get_index_of_features(X: DataFrame, feature: str) -> int:
 
 
 def target_groupby_category(
-    dataframe: DataFrame, feature: str, target: str
+    dataframe: DataFrame,
+    feature: str,
+    target_serie: Series,
 ) -> DataFrame:
     """Group by a categorical feature and calculate mean and volume of the target.
 
@@ -162,7 +164,11 @@ def target_groupby_category(
     Returns:
         DataFrame: DataFrame with mean and volume of the target for each group.
     """
-    df_feat_target = dataframe[[feature, target]].copy()
+
+    target = target_serie.name
+    df_feat_target = concat(
+        [dataframe[[feature]], target_serie], axis=1
+    ).copy()
     df_feat_target["group"] = dataframe[feature]
 
     df_feat_target_group_mean = (

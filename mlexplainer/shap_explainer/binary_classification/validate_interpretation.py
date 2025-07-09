@@ -3,7 +3,7 @@
 from pandas import DataFrame, Series
 from numpy import ndarray
 
-from ..utils_shap_explainer.utils import get_index_of_features
+from ..plots.utils import get_index_of_features
 
 
 def is_interpretation_consistent(
