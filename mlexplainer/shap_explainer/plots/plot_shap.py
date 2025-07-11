@@ -1,97 +1,20 @@
+from numpy import ndarray
 from pandas import DataFrame, Series
+from matplotlib.axes import Axes
+import matplotlib.colors as mcolors
 
 from mlexplainer.shap_explainer.plots.utils import (
     get_index_of_features,
 )
 
 
-def features_shap_plot(
-    dataframe: DataFrame,
-    feature_shap_values: Series,
-    ax1,
-    ax2,
-    delta: float,
-    type_of_shap: str = "train",
-):
-    """Plot SHAP values for features.
-
-    Args:
-        dataframe (DataFrame): Feature values.
-        feature_shap_values (Series): SHAP values for the features.
-        ax1 (Axes): Matplotlib axis for the main plot.
-        ax2 (Axes): Matplotlib axis for the SHAP plot.
-        delta (float): Delta value for adjusting plot limits.
-        type_of_shap (str): Type of SHAP values ("train" or "test").
-
-    Returns:
-        tuple: Matplotlib axes for the main plot and SHAP plot.
-    """
-    # Fill NaN values to plot
-    feature_values = dataframe.fillna(dataframe.min() - delta / 2)
-
-    if type_of_shap == "train":
-        shap_color = [(0.12, 0.53, 0.9), (1.0, 0.5, 0.34)]
-    elif type_of_shap == "test":
-        shap_color = [(0, 0, 0), (0, 0, 0)]
-    else:
-        raise ValueError("Invalid type_of_shap value. Use 'train' or 'test'.")
-
-    colors = [shap_color[int(u > 0)] for u in feature_shap_values]
-
-    ax2.scatter(
-        feature_values,
-        feature_shap_values,
-        c=colors,
-        s=2,
-        alpha=1,
-        marker="x" if type_of_shap == "test" else "o",
-    )
-
-    ax2.tick_params(axis="y", labelsize="large")
-    ax2.text(
-        x=1.05,
-        y=0.8,
-        s="Impact à la hausse",
-        fontsize="large",
-        rotation=90,
-        ha="left",
-        va="center",
-        transform=ax2.transAxes,
-        color=shap_color[1],
-    )
-    ax2.text(
-        x=1.05,
-        y=0.2,
-        s="Impact à la baisse",
-        fontsize="large",
-        rotation=90,
-        ha="left",
-        va="center",
-        transform=ax2.transAxes,
-        color=shap_color[0],
-    )
-    ax2.text(
-        x=1.1,
-        y=0.5,
-        s="Valeurs de Shapley",
-        fontsize="large",
-        rotation=90,
-        ha="left",
-        va="center",
-        transform=ax2.transAxes,
-        color="black",
-    )
-
-    return ax1, ax2
-
-
 def plot_shap_values_numerical_binary(
     x_train: DataFrame,
     feature: str,
-    shap_values_train,
+    shap_values_train: ndarray,
     delta: float,
     ymean_train: float,
-    ax,
+    ax: Axes,
 ) -> tuple:
     """
     Plot SHAP values for a binary classification feature.
@@ -108,12 +31,21 @@ def plot_shap_values_numerical_binary(
     # plot shap values
     ax2 = ax.twinx()
     index_feature_train = get_index_of_features(x_train, feature)
-    ax, ax2 = features_shap_plot(
-        x_train[feature],
+
+    feature_values = x_train[feature].fillna(
+        x_train[feature].min() - delta / 2
+    )
+
+    ax2 = plot_shap_scatter(
+        feature_values,
         shap_values_train[:, index_feature_train],
-        ax,
         ax2,
-        delta,
+        color_positive=(1.0, 0.5, 0.34),
+        color_negative=(0.12, 0.53, 0.9),
+        marker="o",
+        alpha=1,
+        s=2,
+        annotate=True,
     )
 
     # Align and center the secondary y-axis (SHAP values) with the primary y-axis (real mean target)
@@ -150,29 +82,26 @@ def plot_shap_values_numerical_binary(
 def plot_shap_values_categorical_binary(
     x_train: DataFrame,
     feature: str,
-    shap_values_train,
-    ax,
+    shap_values_train: ndarray,
+    ax: Axes,
 ) -> tuple:
+    """Plot SHAP values for a categorical feature in a binary classification task.
+    Args:
+        x_train (DataFrame): Training feature values.
+        feature (str): The feature name to plot.
+        shap_values_train (ndarray): SHAP values for the training features.
+        ax (Axes): Matplotlib axis to plot on.
+    Returns:
+        tuple: Matplotlib axes for the main plot and SHAP plot.
+    """
 
     # calculate the index of the features in the dataframe, to cross with shap values
     index_feature = get_index_of_features(x_train, feature)
 
     if shap_values_train is not None:
-        shap_colors = [(0.12, 0.53, 0.9), (1.0, 0.5, 0.34)]
-        colors = [
-            shap_colors[int(u > 0)]
-            for u in shap_values_train[:, index_feature]
-        ]
 
         ax2 = ax.twinx()
         feature_values = x_train[feature].copy()
-        ax2.scatter(
-            feature_values,
-            shap_values_train[:, index_feature],
-            c=colors,
-            s=2,
-            alpha=1,
-        )
 
         shap_min, shap_max = (
             shap_values_train[:, index_feature].min(),
@@ -186,7 +115,63 @@ def plot_shap_values_categorical_binary(
             max_shap_offset,
         )
 
-        ax2.text(
+        ax2 = plot_shap_scatter(
+            feature_values,
+            shap_values_train[:, index_feature],
+            ax2,
+            color_positive=(1.0, 0.5, 0.34),
+            color_negative=(0.12, 0.53, 0.9),
+            marker="o",
+            alpha=1,
+            s=2,
+            annotate=True,
+        )
+
+    return ax, ax2
+
+
+def plot_shap_scatter(
+    feature_values: Series,
+    shap_values: ndarray,
+    ax: Axes,
+    color_positive: tuple[float, float, float] = (1.0, 0.5, 0.34),
+    color_negative: tuple[float, float, float] = (0.12, 0.53, 0.9),
+    marker: str = "o",
+    alpha: float = 1.0,
+    s: float = 2.0,
+    annotate: bool = True,
+) -> Axes:
+    """Plot a scatter plot of SHAP values.
+
+    Args:
+        feature_values (Series): Values of the feature to plot.
+        shap_values (ndarray): SHAP values to plot.
+        ax (Axes): Matplotlib axis to plot on.
+        color_positive (tuple[float, float, float], optional): Positive color.
+            Defaults to (1.0, 0.5, 0.34).
+        color_negative (tuple[float, float, float], optional): Negative color.
+            Defaults to (0.12, 0.53, 0.9).
+        marker (str, optional): Marker style for the scatter plot.
+            Defaults to "o".
+        alpha (int, optional): Alpha transparency of the points.
+            Defaults to 1.
+        s (int, optional): Size of the points in the scatter plot.
+            Defaults to 2.
+        annotate (bool, optional): Whether to annotate the plot with text labels.
+            Defaults to True.
+
+    Returns:
+        Axes: Matplotlib axis with the scatter plot.
+    """
+
+    colors = [color_positive if u > 0 else color_negative for u in shap_values]
+    ax.scatter(
+        feature_values, shap_values, c=colors, s=s, alpha=alpha, marker=marker
+    )
+    ax.tick_params(axis="y", labelsize="large")
+
+    if annotate:
+        ax.text(
             x=1.05,
             y=0.8,
             s="Impact à la hausse",
@@ -194,10 +179,10 @@ def plot_shap_values_categorical_binary(
             rotation=90,
             ha="left",
             va="center",
-            transform=ax2.transAxes,
-            color=shap_colors[1],
+            transform=ax.transAxes,
+            color=color_positive,
         )
-        ax2.text(
+        ax.text(
             x=1.05,
             y=0.2,
             s="Impact à la baisse",
@@ -205,10 +190,10 @@ def plot_shap_values_categorical_binary(
             rotation=90,
             ha="left",
             va="center",
-            transform=ax2.transAxes,
-            color=shap_colors[0],
+            transform=ax.transAxes,
+            color=color_negative,
         )
-        ax2.text(
+        ax.text(
             x=1.1,
             y=0.5,
             s="Valeurs de Shapley",
@@ -216,8 +201,23 @@ def plot_shap_values_categorical_binary(
             rotation=90,
             ha="left",
             va="center",
-            transform=ax2.transAxes,
+            transform=ax.transAxes,
             color="black",
         )
 
-    return ax, ax2
+        color_positive_str = mcolors.to_hex(color_positive)
+        color_negative_str = mcolors.to_hex(color_negative)
+        for tick in ax.get_yticklabels():
+            tick_text = tick.get_text().replace(
+                "−", "-"
+            )  # Replace unicode minus with ASCII
+            tick_value = float(tick_text)
+            if tick_value == 0:
+                color = "black"
+            elif tick_value > 0:
+                color = color_positive_str
+            else:
+                color = color_negative_str
+            tick.set_color(color)
+
+    return ax
