@@ -1,3 +1,5 @@
+"""Initialization file for the mlexplainer shap_explainer module."""
+
 import sys
 
 sys.path.append(".")

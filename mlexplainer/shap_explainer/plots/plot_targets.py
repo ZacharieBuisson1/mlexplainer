@@ -1,3 +1,8 @@
+"""Plotting functions for SHAP explanations in binary classification tasks.
+This module provides functions to visualize the relationship between features and target variables,
+including numerical and categorical features, as well as handling missing values.
+"""
+
 from pandas import concat, DataFrame, Series
 from numpy import nan
 
@@ -189,6 +194,19 @@ def plot_feature_target_categorical_binary(
     ax: Axes,
     color: tuple[float, float, float] = (0.28, 0.18, 0.71),
 ):
+    """
+    Plot the relationship between a categorical feature and the
+    target variable for binary classification.
+
+    Args:
+        dataframe (DataFrame): DataFrame containing the feature and target variable.
+        target (Series): Series representing the target variable.
+        feature (str): The feature name to plot.
+        ax (Axes): Matplotlib axis to plot on.
+        color (tuple[float, float, float]): Color for the plot.
+    Returns:
+        Axes: Matplotlib axis with the feature-target plot.
+    """
 
     feature_train = dataframe[feature].copy()
     mean_target = target.mean()

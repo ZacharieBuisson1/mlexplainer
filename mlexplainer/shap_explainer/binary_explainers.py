@@ -1,3 +1,8 @@
+"""BinaryMLExplainer for binary classification tasks.
+This module provides an implementation of the BaseMLExplainer for binary classification tasks,
+including methods to explain numerical and categorical features using SHAP values.
+"""
+
 from typing import Callable, List
 
 import matplotlib.pyplot as plt
@@ -18,6 +23,7 @@ from mlexplainer.shap_explainer.plots.plot_shap import (
 
 
 class BinaryMLExplainer(BaseMLExplainer):
+    """BinaryMLExplainer for binary classification tasks."""
 
     def __init__(
         self,
@@ -26,6 +32,23 @@ class BinaryMLExplainer(BaseMLExplainer):
         features: List[str],
         model: Callable,
     ):
+        """
+        Initialize the BinaryMLExplainer with training data, features, and model.
+        Args:
+            x_train (DataFrame): Training feature values.
+            y_train (Series): Training target values.
+            features (List[str]): List of feature names to interpret.
+            model (Callable): The machine learning model to explain.
+        Raises:
+            ValueError: If x_train or y_train is None, or if features are not provided
+                        or not present in x_train.
+            ValueError: If any feature in features is not present in x_train.
+            ValueError: If no features are provided.
+        """
+        if y_train.nunique() != 2:
+            raise ValueError(
+                "y_train must be a binary target variable with exactly two unique values."
+            )
 
         super().__init__(x_train, y_train, features, model)
 
@@ -49,8 +72,6 @@ class BinaryMLExplainer(BaseMLExplainer):
 
         # check if cat features are corrects
         self._explain_categorical(**kwargs)
-
-        return None
 
     def _explain_numerical(self, **kwargs):
         """Interpret features for binary classification.
@@ -128,5 +149,5 @@ def calculate_min_max_value(dataframe: DataFrame, feature: str):
     """
     if dataframe[feature].dtype == "category":
         return 0, dataframe[feature].value_counts().shape[0] - 1
-    else:
-        return dataframe[feature].min(), dataframe[feature].max()
+
+    return dataframe[feature].min(), dataframe[feature].max()
