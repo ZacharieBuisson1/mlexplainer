@@ -1,4 +1,4 @@
-from numpy import ndarray
+from numpy import ndarray, where
 from pandas import DataFrame, Series
 from matplotlib.axes import Axes
 import matplotlib.colors as mcolors
@@ -15,7 +15,13 @@ def plot_shap_values_numerical_binary(
     delta: float,
     ymean_train: float,
     ax: Axes,
-) -> tuple:
+    color_positive: tuple[float, float, float] = (1.0, 0.5, 0.34),
+    color_negative: tuple[float, float, float] = (0.12, 0.53, 0.9),
+    marker: str = "o",
+    alpha: float = 1.0,
+    s: float = 2.0,
+    annotate: bool = True,
+) -> tuple[Axes, Axes]:
     """
     Plot SHAP values for a binary classification feature.
     Args:
@@ -25,12 +31,21 @@ def plot_shap_values_numerical_binary(
         delta (float): Delta value for adjusting plot limits.
         ymean_train (float): Mean of the target variable in the training set.
         ax: Matplotlib axis to plot on.
+        color_positive (tuple[float, float, float], optional): Color for positive SHAP values.
+            Defaults to (1.0, 0.5, 0.34).
+        color_negative (tuple[float, float, float], optional): Color for negative SHAP values.
+            Defaults to (0.12, 0.53, 0.9).
+        marker (str, optional): Marker style for the scatter plot. Defaults to "o".
+        alpha (float, optional): Alpha transparency of the points. Defaults to 1.0.
+        s (float, optional): Size of the points in the scatter plot. Defaults to 2.0.
+        annotate (bool, optional): Whether to annotate the plot with text labels.
+            Defaults to True.
     Returns:
         tuple: Matplotlib axes for the main plot and SHAP plot.
     """
     # plot shap values
     ax2 = ax.twinx()
-    index_feature_train = get_index_of_features(x_train, feature)
+    index_feature = get_index_of_features(x_train, feature)
 
     feature_values = x_train[feature].fillna(
         x_train[feature].min() - delta / 2
@@ -38,21 +53,21 @@ def plot_shap_values_numerical_binary(
 
     ax2 = plot_shap_scatter(
         feature_values,
-        shap_values_train[:, index_feature_train],
+        shap_values_train[:, index_feature],
         ax2,
-        color_positive=(1.0, 0.5, 0.34),
-        color_negative=(0.12, 0.53, 0.9),
-        marker="o",
-        alpha=1,
-        s=2,
-        annotate=True,
+        color_positive=color_positive,
+        color_negative=color_negative,
+        marker=marker,
+        alpha=alpha,
+        s=s,
+        annotate=annotate,
     )
 
     # Align and center the secondary y-axis (SHAP values) with the primary y-axis (real mean target)
     primary_ymin, primary_ymax = ax.get_ylim()  # Get primary y-axis limits
     shap_min, shap_max = (
-        shap_values_train[:, index_feature_train].min(),
-        shap_values_train[:, index_feature_train].max(),
+        shap_values_train[:, index_feature].min(),
+        shap_values_train[:, index_feature].max(),
     )
 
     # Determine the center points
@@ -84,13 +99,28 @@ def plot_shap_values_categorical_binary(
     feature: str,
     shap_values_train: ndarray,
     ax: Axes,
-) -> tuple:
+    color_positive: tuple[float, float, float] = (1.0, 0.5, 0.34),
+    color_negative: tuple[float, float, float] = (0.12, 0.53, 0.9),
+    marker: str = "o",
+    alpha: float = 1.0,
+    s: float = 2.0,
+    annotate: bool = True,
+) -> tuple[Axes, Axes]:
     """Plot SHAP values for a categorical feature in a binary classification task.
     Args:
         x_train (DataFrame): Training feature values.
         feature (str): The feature name to plot.
         shap_values_train (ndarray): SHAP values for the training features.
         ax (Axes): Matplotlib axis to plot on.
+        color_positive (tuple[float, float, float], optional): Color for positive SHAP values.
+            Defaults to (1.0, 0.5, 0.34).
+        color_negative (tuple[float, float, float], optional): Color for negative SHAP values.
+            Defaults to (0.12, 0.53, 0.9).
+        marker (str, optional): Marker style for the scatter plot. Defaults to "o".
+        alpha (float, optional): Alpha transparency of the points. Defaults to 1.0.
+        s (float, optional): Size of the points in the scatter plot. Defaults to 2.0.
+        annotate (bool, optional): Whether to annotate the plot with text labels.
+            Defaults to True.
     Returns:
         tuple: Matplotlib axes for the main plot and SHAP plot.
     """
@@ -98,34 +128,33 @@ def plot_shap_values_categorical_binary(
     # calculate the index of the features in the dataframe, to cross with shap values
     index_feature = get_index_of_features(x_train, feature)
 
-    if shap_values_train is not None:
+    # plot shap values
+    ax2 = ax.twinx()
+    feature_values = x_train[feature].copy()
 
-        ax2 = ax.twinx()
-        feature_values = x_train[feature].copy()
+    shap_min, shap_max = (
+        shap_values_train[:, index_feature].min(),
+        shap_values_train[:, index_feature].max(),
+    )
+    max_shap_offset = max(abs(shap_min), abs(shap_max))
 
-        shap_min, shap_max = (
-            shap_values_train[:, index_feature].min(),
-            shap_values_train[:, index_feature].max(),
-        )
-        max_shap_offset = max(abs(shap_min), abs(shap_max))
+    # Set the limits for the secondary y-axis (centered around 0)
+    ax2.set_ylim(
+        -max_shap_offset,
+        max_shap_offset,
+    )
 
-        # Set the limits for the secondary y-axis (centered around 0)
-        ax2.set_ylim(
-            -max_shap_offset,
-            max_shap_offset,
-        )
-
-        ax2 = plot_shap_scatter(
-            feature_values,
-            shap_values_train[:, index_feature],
-            ax2,
-            color_positive=(1.0, 0.5, 0.34),
-            color_negative=(0.12, 0.53, 0.9),
-            marker="o",
-            alpha=1,
-            s=2,
-            annotate=True,
-        )
+    ax2 = plot_shap_scatter(
+        feature_values,
+        shap_values_train[:, index_feature],
+        ax2,
+        color_positive=color_positive,
+        color_negative=color_negative,
+        marker=marker,
+        alpha=alpha,
+        s=s,
+        annotate=annotate,
+    )
 
     return ax, ax2
 
@@ -164,7 +193,7 @@ def plot_shap_scatter(
         Axes: Matplotlib axis with the scatter plot.
     """
 
-    colors = [color_positive if u > 0 else color_negative for u in shap_values]
+    colors = where(shap_values > 0, color_positive, color_negative)
     ax.scatter(
         feature_values, shap_values, c=colors, s=s, alpha=alpha, marker=marker
     )
