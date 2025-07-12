@@ -172,7 +172,7 @@ def target_groupby_category(
     df_feat_target["group"] = dataframe[feature]
 
     df_feat_target_group_mean = (
-        df_feat_target.groupby("group", dropna=False)[target]
+        df_feat_target.groupby("group", dropna=False, observed=False)[target]
         .mean()
         .sort_index()
         .reset_index()
@@ -180,7 +180,7 @@ def target_groupby_category(
     )
 
     df_feat_target_group_volume = (
-        df_feat_target.groupby("group", dropna=False)[target]
+        df_feat_target.groupby("group", dropna=False, observed=False)[target]
         .count()
         .sort_index()
         .reset_index()

@@ -5,7 +5,6 @@ from matplotlib import ticker
 from matplotlib.axes import Axes
 
 from mlexplainer.shap_explainer.plots.utils import (
-    get_index_of_features,
     group_values,
     target_groupby_category,
 )
@@ -22,16 +21,18 @@ def creneau(x: DataFrame, xmin: float, xmax: float) -> DataFrame:
     Returns:
         pandas.DataFrame: Transformed DataFrame with square wave pattern.
     """
-    x_copy = x.copy()  # Copy of x
-    x_copy["group"] = x_copy["group"].shift(1)
-    x_copy["group"] = x_copy["group"].replace(nan, xmin)
+    # Travailler sur des copies explicites pour éviter les warnings
+    x_a = x.copy()
+    x_b = x.copy()
 
-    # Create column to sort dataframe at the end
-    x_copy["ranking"] = "b"
-    x["ranking"] = "a"
+    x_b["group"] = x_b["group"].shift(1)
+    x_b["group"] = x_b["group"].replace(nan, xmin)
 
-    # Concatenation of duplicated dataframes
-    double_x = concat([x, x_copy], axis=0)  # Concatenation
+    x_a["ranking"] = "a"
+    x_b["ranking"] = "b"
+
+    # Concatenation et tri
+    double_x = concat([x_a, x_b], axis=0)
     double_x = double_x.sort_values(by=["group", "ranking"])
     double_x = double_x.drop(columns=["ranking"])
 
@@ -176,17 +177,7 @@ def plot_feature_numerical_target(
     ax = add_nans(nan_observation, xmin, delta, ax, color)
 
     # Transform tick to percent
-    ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
-
-    # Change the label
-    ax.set_ylabel("Taux de cible", fontsize="large", color=color)
-
-    # Change size of ticks
-    ax.tick_params(axis="y", labelsize="large")
-
-    # Change color of ticks
-    for tick in ax.get_yticklabels():
-        tick.set_color(color)
+    ax = reformat_y_axis(ax, color)
 
     return ax, used_q
 
@@ -220,19 +211,43 @@ def plot_feature_target_categorical_binary(
     )
 
     # Determine the center points
-    primary_center = target.mean()
-    primary_ymin, primary_ymax = ax.get_ylim()
+    y_center = target.mean()
+    ax = set_centered_ylim(ax, y_center)
 
-    # Calculate the maximum range to ensure symmetry
-    max_primary_offset = max(
-        primary_center - primary_ymin, primary_ymax - primary_center
-    )
+    # Transform tick to percent
+    ax = reformat_y_axis(ax, color)
 
-    # Set the limits for the primary y-axis (centered around ymean_train)
-    ax.set_ylim(
-        primary_center - max_primary_offset,
-        primary_center + max_primary_offset,
-    )
+    return ax
+
+
+def set_centered_ylim(ax: Axes, center: float) -> Axes:
+    """Set the y-axis limits centered around a specified value.
+
+    Args:
+        ax (Axes): Matplotlib axis to set limits for.
+        center (float): Center value around which to set the limits.
+    Returns:
+        Axes: Matplotlib axis with updated y-axis limits.
+    """
+
+    ymin, ymax = ax.get_ylim()
+    max_offset = max(center - ymin, ymax - center)
+    ax.set_ylim(center - max_offset, center + max_offset)
+
+    return ax
+
+
+def reformat_y_axis(
+    ax: Axes,
+    color: tuple[float, float, float] = (0.28, 0.18, 0.71),
+) -> Axes:
+    """Refactor the y-axis of a plot.
+    Args:
+        ax (Axes): Matplotlib axis to refactor.
+        color (tuple[float, float, float]): Color for the y-axis label and ticks.
+    Returns:
+        Axes: Matplotlib axis with refactored y-axis.
+    """
 
     # Transform tick to percent
     ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))

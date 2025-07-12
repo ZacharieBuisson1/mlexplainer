@@ -44,8 +44,10 @@ class BinaryMLExplainer(BaseMLExplainer):
                 - q: Number of quantiles for plotting (default: 20)
         """
 
+        # check if num features are corrects
         self._explain_numerical(**kwargs)
 
+        # check if cat features are corrects
         self._explain_categorical(**kwargs)
 
         return None

@@ -193,7 +193,7 @@ def plot_shap_scatter(
         Axes: Matplotlib axis with the scatter plot.
     """
 
-    colors = where(shap_values > 0, color_positive, color_negative)
+    colors = [color_positive if v > 0 else color_negative for v in shap_values]
     ax.scatter(
         feature_values, shap_values, c=colors, s=s, alpha=alpha, marker=marker
     )
