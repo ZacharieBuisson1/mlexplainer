@@ -235,6 +235,10 @@ def plot_feature_target_categorical_binary(
     # Transform tick to percent
     ax = reformat_y_axis(ax, color)
 
+    # set up a label for the feature
+    feature_label = feature
+    ax.set_xlabel(feature_label, fontsize="large")
+
     return ax
 
 

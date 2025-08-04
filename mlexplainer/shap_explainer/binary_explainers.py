@@ -5,7 +5,9 @@ including methods to explain numerical and categorical features using SHAP value
 
 from typing import Callable, List
 
+
 import matplotlib.pyplot as plt
+from numpy import inf, arange, isclose
 from pandas import DataFrame, Series
 
 from mlexplainer.shap_explainer.base import BaseMLExplainer, ShapWrapper
@@ -16,6 +18,11 @@ from mlexplainer.shap_explainer.plots.plot_targets import (
 from mlexplainer.shap_explainer.plots.plot_shap import (
     plot_shap_values_categorical_binary,
     plot_shap_values_numerical_binary,
+)
+from mlexplainer.shap_explainer.plots.utils import (
+    group_values,
+    get_index_of_features,
+    is_in_quantile,
 )
 
 
@@ -198,6 +205,124 @@ class BinaryMLExplainer(BaseMLExplainer):
             )
 
         plt.show()
+
+    def validate_feature_interpretation(
+        self,
+        feature: str,
+        q=None,
+    ) -> bool:
+        """Validate the interpretation consistency between actual target rates and SHAP values.
+
+        This method compares feature impact by analyzing:
+        - For continuous features: divides values into quantiles and compares target rates vs SHAP values
+        - For discrete features: compares target rates by category vs SHAP values
+        - Handles missing values as a separate category
+
+        Args:
+            feature (str): The feature name to validate.
+            shap_values: SHAP values for the training features. If None, uses self.shap_values_train.
+            q (int): Number of quantiles for continuous features. If None, uses adaptive quantiles.
+
+        Returns:
+            bool: True if interpretation is consistent, False otherwise.
+        """
+        if feature not in self.features:
+            raise ValueError(
+                f"Feature '{feature}' not found in features list."
+            )
+
+        # Get feature index for SHAP values
+        feature_index = get_index_of_features(self.x_train, feature)
+        feature_shap_values = self.shap_values_train[:, feature_index]
+
+        # Determine if feature is continuous or discrete
+        is_continuous = feature in self.numerical_features
+
+        if is_continuous:
+            # For continuous features, use quantile-based grouping
+            grouped_data, _ = group_values(
+                self.x_train[feature], self.y_train, q
+            )
+
+            # Create interpretation dictionaries
+            observed_interpretation = {}
+            shap_interpretation = {}
+
+            for _, row in grouped_data.iterrows():
+                group_val = row["group"]
+                target_rate = row["target"]
+
+                # Determine observed interpretation (above/below global mean)
+                observed_interpretation[group_val] = (
+                    "above" if target_rate > self.ymean_train else "below"
+                )
+
+                # Get SHAP values for this group
+                if group_val != group_val:  # Check for NaN (missing values)
+                    group_mask = self.x_train[feature].isna()
+                else:
+                    # Find which observations belong to this quantile group
+
+                    if q is None or self.x_train[feature].nunique() <= 15:
+                        group_mask = self.x_train[feature] == group_val
+                    else:
+                        # Recreate quantile boundaries to match group_values logic
+                        quantiles = arange(
+                            1 / len(grouped_data), 1, 1 / len(grouped_data)
+                        )
+                        quantiles = [
+                            quant
+                            for quant in quantiles
+                            if not isclose(quant, 1)
+                        ]
+                        quantiles_values = list(
+                            self.x_train[feature].quantile(quantiles)
+                        ) + [inf]
+
+                        group_mask = (
+                            self.x_train[feature].apply(
+                                lambda val: is_in_quantile(
+                                    val, quantiles_values
+                                )
+                            )
+                            == group_val
+                        )
+
+                # Calculate mean SHAP value for this group
+                group_shap_mean = feature_shap_values[group_mask].mean()
+                shap_interpretation[group_val] = (
+                    "above" if group_shap_mean > 0 else "below"
+                )
+
+        else:
+            # For discrete/categorical features, group by unique values
+            feature_values = self.x_train[feature]
+            unique_values = feature_values.unique()
+
+            observed_interpretation = {}
+            shap_interpretation = {}
+
+            for value in unique_values:
+                # Calculate target rate for this category
+                mask = feature_values == value
+                target_rate = self.y_train[mask].mean()
+                observed_interpretation[value] = (
+                    "above" if target_rate > self.ymean_train else "below"
+                )
+
+                # Calculate mean SHAP value for this category
+                shap_mean = feature_shap_values[mask].mean()
+                shap_interpretation[value] = (
+                    "above" if shap_mean > 0 else "below"
+                )
+
+        # Compare interpretations - count matches
+        matches = [
+            (key, observed_interpretation[key] == shap_interpretation[key])
+            for key in observed_interpretation.keys()
+        ]
+
+        return matches
 
 
 def calculate_min_max_value(dataframe: DataFrame, feature: str):
