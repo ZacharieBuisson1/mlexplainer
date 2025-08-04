@@ -13,6 +13,8 @@ class BaseMLExplainer(ABC):
         y_train: Series,
         features: List[str],
         model: Callable,
+        global_explainer: bool = True,
+        local_explainer: bool = True,
     ):
         """
         Initialize the BaseMLExplainer with training data, features, and model.
@@ -32,6 +34,8 @@ class BaseMLExplainer(ABC):
         self.y_train = y_train
         self.features = features
         self.model = model
+        self.global_explainer = global_explainer
+        self.local_explainer = local_explainer
 
         # split features into categorical, numerical and string
         self.categorical_features: List[str] = [

@@ -8,10 +8,7 @@ from typing import Callable, List
 import matplotlib.pyplot as plt
 from pandas import DataFrame, Series
 
-from mlexplainer.shap_explainer.base import BaseMLExplainer
-from mlexplainer.shap_explainer.base.shap_wrapper import (
-    ShapWrapper,
-)
+from mlexplainer.shap_explainer.base import BaseMLExplainer, ShapWrapper
 from mlexplainer.shap_explainer.plots.plot_targets import (
     plot_feature_target_categorical_binary,
     plot_feature_target_numerical_binary,
@@ -31,6 +28,8 @@ class BinaryMLExplainer(BaseMLExplainer):
         y_train: Series,
         features: List[str],
         model: Callable,
+        global_explainer: bool = True,
+        local_explainer: bool = True,
     ):
         """
         Initialize the BinaryMLExplainer with training data, features, and model.
@@ -50,7 +49,14 @@ class BinaryMLExplainer(BaseMLExplainer):
                 "y_train must be a binary target variable with exactly two unique values."
             )
 
-        super().__init__(x_train, y_train, features, model)
+        super().__init__(
+            x_train,
+            y_train,
+            features,
+            model,
+            global_explainer,
+            local_explainer,
+        )
 
         self.shap_values_train = ShapWrapper(self.model).calculate(
             dataframe=self.x_train, features=self.features
@@ -67,11 +73,67 @@ class BinaryMLExplainer(BaseMLExplainer):
                 - q: Number of quantiles for plotting (default: 20)
         """
 
-        # check if num features are corrects
-        self._explain_numerical(**kwargs)
+        if self.global_explainer:
 
-        # check if cat features are corrects
-        self._explain_categorical(**kwargs)
+            # plot a global features importance
+            self._explain_global_features(**kwargs)
+
+        if self.local_explainer:
+
+            # check if num features are corrects
+            self._explain_numerical(**kwargs)
+
+            # check if cat features are corrects
+            self._explain_categorical(**kwargs)
+
+    def _explain_global_features(self, **kwargs):
+        """Interpret global features for binary classification.
+
+        This method should be implemented to provide global feature interpretation
+        specific to binary classification tasks.
+        """
+        # calculate the absolute value for each features
+        absolute_shap_values = DataFrame(
+            self.shap_values_train, columns=self.features
+        ).apply(abs)
+
+        # calculate the sum of mean of absolute SHAP values
+        mean_absolute_shap_values = absolute_shap_values.mean().sum()
+
+        relative_importance = (
+            (
+                absolute_shap_values.mean().divide(mean_absolute_shap_values)
+                * 100
+            )
+            .reset_index(drop=False)
+            .rename(columns={"index": "features", 0: "importances"})
+            .sort_values(by="importances", ascending=True)
+        )
+
+        figsize = kwargs.get("figsize", (15, 8))
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+        # plot with horizontal bar chart
+        ax.barh(
+            relative_importance["features"], relative_importance["importances"]
+        )
+
+        # set the title and labels
+        ax.set_title(
+            "Global Feature Importance for Binary Classification (Mean of the absolute SHAP values)"
+        )
+        ax.set_xlabel("Relative Importance (%)")
+        ax.set_ylabel("Features")
+
+        for _, row in relative_importance.iterrows():
+            ax.text(
+                row.importances,
+                row.features,
+                s=" " + str(round(row.importances, 1)) + "%.",
+                va="center",
+            )
+
+        plt.show()
 
     def _explain_numerical(self, **kwargs):
         """Interpret features for binary classification.
