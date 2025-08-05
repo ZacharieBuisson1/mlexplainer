@@ -3,7 +3,7 @@ from pandas import DataFrame, Series
 from matplotlib.axes import Axes
 import matplotlib.colors as mcolors
 
-from mlexplainer.shap_explainer.plots.utils import (
+from mlexplainer.utils.data_processing import (
     get_index_of_features,
 )
 

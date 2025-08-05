@@ -82,10 +82,9 @@ class BaseMLExplainer(ABC):
         and SHAP values for all features in the explainer.
 
         Args:
-            shap_values (Optional[Any]): SHAP values for the training features.
             q (Optional[int]): Number of quantiles for continuous features. If None, uses adaptive quantiles.
 
         Returns:
-            dict: Dictionary with feature names as keys and correctness boolean as values.
+            dict: Dictionary with feature names as keys and correctness results as values.
         """
         pass
