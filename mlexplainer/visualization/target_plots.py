@@ -9,10 +9,8 @@ from numpy import nan
 from matplotlib import ticker
 from matplotlib.axes import Axes
 
-from mlexplainer.shap_explainer.plots.utils import (
-    group_values,
-    target_groupby_category,
-)
+from mlexplainer.utils.quantiles import group_values
+from mlexplainer.utils.data_processing import target_groupby_category
 
 
 def creneau(x: DataFrame, xmin: float, xmax: float) -> DataFrame:
