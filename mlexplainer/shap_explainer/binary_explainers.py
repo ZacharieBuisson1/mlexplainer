@@ -7,7 +7,7 @@ from typing import Callable, List
 
 
 import matplotlib.pyplot as plt
-from numpy import inf, arange, isclose
+from numpy import inf, arange, isclose, nan
 from pandas import DataFrame, Series
 
 from mlexplainer.shap_explainer.base import BaseMLExplainer, ShapWrapper
@@ -206,11 +206,34 @@ class BinaryMLExplainer(BaseMLExplainer):
 
         plt.show()
 
-    def validate_feature_interpretation(
+    def correctness_features(
+        self,
+        q=None,
+    ) -> dict:
+        """Analyze the correctness of the analysis for every feature.
+
+        This method validates interpretation consistency between actual target rates
+        and SHAP values for all features in the explainer.
+
+        Args:
+            shap_values: SHAP values for the training features. If None, uses self.shap_values_train.
+            q (int): Number of quantiles for continuous features. If None, uses adaptive quantiles.
+
+        Returns:
+            dict: Dictionary with feature names as keys and correctness boolean as values.
+        """
+        results = {}
+        for feature in self.features:
+            results[feature] = self._validate_feature_interpretation(
+                feature, q
+            )
+        return results
+
+    def _validate_feature_interpretation(
         self,
         feature: str,
         q=None,
-    ) -> bool:
+    ) -> list:
         """Validate the interpretation consistency between actual target rates and SHAP values.
 
         This method compares feature impact by analyzing:
@@ -248,6 +271,20 @@ class BinaryMLExplainer(BaseMLExplainer):
             observed_interpretation = {}
             shap_interpretation = {}
 
+            # First, process all groups to get interpretations
+            quantiles_values = None
+            if not (q is None or self.x_train[feature].nunique() <= 15):
+                # Prepare quantile boundaries for later use
+                quantiles = arange(
+                    1 / len(grouped_data), 1, 1 / len(grouped_data)
+                )
+                quantiles = [
+                    quant for quant in quantiles if not isclose(quant, 1)
+                ]
+                quantiles_values = list(
+                    self.x_train[feature].quantile(quantiles)
+                ) + [inf]
+
             for _, row in grouped_data.iterrows():
                 group_val = row["group"]
                 target_rate = row["target"]
@@ -262,23 +299,9 @@ class BinaryMLExplainer(BaseMLExplainer):
                     group_mask = self.x_train[feature].isna()
                 else:
                     # Find which observations belong to this quantile group
-
                     if q is None or self.x_train[feature].nunique() <= 15:
                         group_mask = self.x_train[feature] == group_val
                     else:
-                        # Recreate quantile boundaries to match group_values logic
-                        quantiles = arange(
-                            1 / len(grouped_data), 1, 1 / len(grouped_data)
-                        )
-                        quantiles = [
-                            quant
-                            for quant in quantiles
-                            if not isclose(quant, 1)
-                        ]
-                        quantiles_values = list(
-                            self.x_train[feature].quantile(quantiles)
-                        ) + [inf]
-
                         group_mask = (
                             self.x_train[feature].apply(
                                 lambda val: is_in_quantile(
@@ -293,6 +316,38 @@ class BinaryMLExplainer(BaseMLExplainer):
                 shap_interpretation[group_val] = (
                     "above" if group_shap_mean > 0 else "below"
                 )
+
+            # Now create interval mapping for all processed groups
+            group_intervals = {}
+            if q is None or self.x_train[feature].nunique() <= 15:
+                # For small number of unique values, each value is its own group
+                for key in observed_interpretation.keys():
+                    if key != key:  # NaN case
+                        group_intervals[key] = ("missing", "missing")
+                    else:
+                        group_intervals[key] = (key, key)
+            else:
+                # For quantile-based grouping, create interval boundaries
+                sorted_groups = sorted(
+                    [k for k in observed_interpretation.keys() if k == k]
+                )  # Filter out NaN
+                for i, group_val in enumerate(sorted_groups):
+                    if i == 0:
+                        start_val = self.x_train[feature].min()
+                    else:
+                        start_val = quantiles_values[i - 1]
+
+                    if group_val == inf:
+                        end_val = self.x_train[feature].max()
+                    else:
+                        end_val = group_val
+
+                    group_intervals[group_val] = (start_val, end_val)
+
+                # Handle NaN groups
+                for key in observed_interpretation.keys():
+                    if key != key:  # NaN case
+                        group_intervals[key] = (nan, nan)
 
         else:
             # For discrete/categorical features, group by unique values
@@ -316,11 +371,23 @@ class BinaryMLExplainer(BaseMLExplainer):
                     "above" if shap_mean > 0 else "below"
                 )
 
-        # Compare interpretations - count matches
-        matches = [
-            (key, observed_interpretation[key] == shap_interpretation[key])
-            for key in observed_interpretation.keys()
-        ]
+        # Compare interpretations and return results with intervals for continuous features
+        if is_continuous:
+            matches = [
+                (
+                    round(float(group_intervals[key][0]), 3),  # start_key
+                    round(float(group_intervals[key][1]), 3),  # end_key
+                    observed_interpretation[key]
+                    == shap_interpretation[key],  # is_consistent
+                )
+                for key in observed_interpretation.keys()
+            ]
+        else:
+            # For discrete features, keep original format
+            matches = [
+                (key, observed_interpretation[key] == shap_interpretation[key])
+                for key in observed_interpretation.keys()
+            ]
 
         return matches
 

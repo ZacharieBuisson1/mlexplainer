@@ -72,24 +72,20 @@ class BaseMLExplainer(ABC):
         pass
 
     @abstractmethod
-    def validate_feature_interpretation(
+    def correctness_features(
         self,
-        feature: str,
         q: Optional[int] = None,
-    ) -> bool:
-        """Validate the interpretation consistency between actual target rates and SHAP values.
+    ) -> dict:
+        """Analyze the correctness of the analysis for every feature.
 
-        This method compares feature impact by analyzing:
-        - For continuous features: divides values into quantiles and compares target rates vs SHAP values
-        - For discrete features: compares target rates by category vs SHAP values
-        - Handles missing values as a separate category
+        This method validates interpretation consistency between actual target rates
+        and SHAP values for all features in the explainer.
 
         Args:
-            feature (str): The feature name to validate.
             shap_values (Optional[Any]): SHAP values for the training features.
             q (Optional[int]): Number of quantiles for continuous features. If None, uses adaptive quantiles.
 
         Returns:
-            bool: True if interpretation is consistent, False otherwise.
+            dict: Dictionary with feature names as keys and correctness boolean as values.
         """
         pass
