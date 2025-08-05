@@ -38,6 +38,14 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction --no-root --all-extras 
 
+      - name : Execute code quality tools
+        run: |
+          poetry run pylint ./mlexplainer --fail-under=9.0 
+      
+      - name : Execute mypy check
+        run: |
+          poetry run mypy ./mlexplainer
+      
       - name: Run tests
         run: |
           poetry run coverage run -m unittest discover ./tests -t .
