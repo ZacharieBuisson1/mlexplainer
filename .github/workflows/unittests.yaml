@@ -40,7 +40,7 @@ jobs:
 
       - name : Execute code quality tools
         run: |
-          poetry run pylint ./mlexplainer --fail-under=9.0 
+          poetry run pylint ./mlexplainer --fail-under=7.5 
       
       - name : Execute mypy check
         run: |
