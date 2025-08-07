@@ -18,11 +18,21 @@ class BaseMLExplainer(ABC):
     ):
         """
         Initialize the BaseMLExplainer with training data, features, and model.
+        This class is designed to be subclassed for specific machine learning models
+        and should implement the `explain` and `correctness_features` methods.
+        The main purpose of this class is to provide a structure for
+        interpreting features in machine learning models how see if the way a model
+        understands features is correct.
+        It also provides a way to analyze the correctness of the analysis for every feature.
         Args:
             x_train (DataFrame): Training feature values.
             y_train (Series): Training target values.
             features (List[str]): List of feature names to interpret.
             model (Callable): The machine learning model to explain.
+            global_explainer (bool): Whether to use a global explainer.
+                                     Defaults to True.
+            local_explainer (bool): Whether to use a local explainer.
+                                     Defaults to True.
         Raises:
             ValueError: If x_train or y_train is None, or if features are not provided
                         or not present in x_train.
@@ -68,6 +78,10 @@ class BaseMLExplainer(ABC):
     def explain(self, **kwargs: Any) -> None:
         """Interpret features for the machine learning model.
         This method should be implemented in subclasses to provide specific interpretations.
+        Args:
+            **kwargs (Any): Additional keyword arguments for customization.
+        Returns:
+            None: This method does not return anything, it modifies the state of the explainer.
         """
         pass
 
@@ -77,12 +91,13 @@ class BaseMLExplainer(ABC):
         q: Optional[int] = None,
     ) -> dict:
         """Analyze the correctness of the analysis for every feature.
-
         This method validates interpretation consistency between actual target rates
         and SHAP values for all features in the explainer.
 
         Args:
-            q (Optional[int]): Number of quantiles for continuous features. If None, uses adaptive quantiles.
+            q (Optional[int]): Number of quantiles for continuous features.
+                If None, uses adaptive quantiles.
+                Defaults to None.
 
         Returns:
             dict: Dictionary with feature names as keys and correctness results as values.

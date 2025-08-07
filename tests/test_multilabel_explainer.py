@@ -170,8 +170,8 @@ class TestMultilabelMLExplainer(unittest.TestCase):
                 self.assertIn(modality, validation_result)
     
     @patch('mlexplainer.explainers.shap.multilabel.ShapWrapper')
-    def test_validate_feature_interpretation_invalid_feature(self, mock_shap_wrapper):
-        """Test _validate_feature_interpretation with invalid feature."""
+    def test_correctness_features_valid(self, mock_shap_wrapper):
+        """Test correctness_features with valid features."""
         mock_wrapper_instance = Mock()
         mock_wrapper_instance.calculate.return_value = self.mock_shap_values
         mock_shap_wrapper.return_value = mock_wrapper_instance
@@ -180,14 +180,15 @@ class TestMultilabelMLExplainer(unittest.TestCase):
             self.x_train, self.y_train, self.features, self.model
         )
         
-        with self.assertRaises(ValueError) as context:
-            explainer._validate_feature_interpretation('nonexistent_feature')
-        
-        self.assertIn("not found in features list", str(context.exception))
+        result = explainer.correctness_features()
+        self.assertIsInstance(result, dict)
+        # Should have results for all features
+        for feature in self.features:
+            self.assertIn(feature, result)
     
     @patch('mlexplainer.explainers.shap.multilabel.ShapWrapper')
-    def test_validate_feature_interpretation_numerical(self, mock_shap_wrapper):
-        """Test _validate_feature_interpretation with numerical feature."""
+    def test_correctness_features_numerical(self, mock_shap_wrapper):
+        """Test correctness_features with numerical feature."""
         mock_wrapper_instance = Mock()
         mock_wrapper_instance.calculate.return_value = self.mock_shap_values
         mock_shap_wrapper.return_value = mock_wrapper_instance
@@ -196,17 +197,18 @@ class TestMultilabelMLExplainer(unittest.TestCase):
             self.x_train, self.y_train, ['numerical_feature'], self.model
         )
         
-        result = explainer._validate_feature_interpretation('numerical_feature')
+        result = explainer.correctness_features()
         
         self.assertIsInstance(result, dict)
+        self.assertIn('numerical_feature', result)
         # Should have results for each modality
         for modality in explainer.modalities:
-            self.assertIn(modality, result)
-            self.assertIsInstance(result[modality], list)
+            self.assertIn(modality, result['numerical_feature'])
+            self.assertIsInstance(result['numerical_feature'][modality], list)
     
     @patch('mlexplainer.explainers.shap.multilabel.ShapWrapper')
-    def test_validate_feature_interpretation_categorical(self, mock_shap_wrapper):
-        """Test _validate_feature_interpretation with categorical feature."""
+    def test_correctness_features_categorical(self, mock_shap_wrapper):
+        """Test correctness_features with categorical feature."""
         mock_wrapper_instance = Mock()
         mock_wrapper_instance.calculate.return_value = self.mock_shap_values
         mock_shap_wrapper.return_value = mock_wrapper_instance
@@ -215,17 +217,18 @@ class TestMultilabelMLExplainer(unittest.TestCase):
             self.x_train, self.y_train, ['categorical_feature'], self.model
         )
         
-        result = explainer._validate_feature_interpretation('categorical_feature')
+        result = explainer.correctness_features()
         
         self.assertIsInstance(result, dict)
+        self.assertIn('categorical_feature', result)
         # Should have results for each modality
         for modality in explainer.modalities:
-            self.assertIn(modality, result)
-            self.assertIsInstance(result[modality], list)
+            self.assertIn(modality, result['categorical_feature'])
+            self.assertIsInstance(result['categorical_feature'][modality], list)
     
     @patch('mlexplainer.explainers.shap.multilabel.ShapWrapper')
-    def test_validate_feature_interpretation_no_shap_values(self, mock_shap_wrapper):
-        """Test _validate_feature_interpretation when SHAP values are None."""
+    def test_correctness_features_no_shap_values(self, mock_shap_wrapper):
+        """Test correctness_features when SHAP values are None."""
         mock_wrapper_instance = Mock()
         mock_wrapper_instance.calculate.return_value = None
         mock_shap_wrapper.return_value = mock_wrapper_instance
@@ -236,12 +239,14 @@ class TestMultilabelMLExplainer(unittest.TestCase):
         # Override shap_values_train to None
         explainer.shap_values_train = None
         
-        result = explainer._validate_feature_interpretation('numerical_feature')
+        result = explainer.correctness_features()
         
         self.assertIsInstance(result, dict)
-        # Should return False for all modalities
-        for modality in explainer.modalities:
-            self.assertFalse(result[modality])
+        # Should return False for all features and modalities
+        for feature in self.features:
+            self.assertIn(feature, result)
+            for modality in explainer.modalities:
+                self.assertFalse(result[feature][modality])
     
     @patch('mlexplainer.explainers.shap.multilabel.ShapWrapper')
     def test_modalities_extraction(self, mock_shap_wrapper):
