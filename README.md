@@ -8,7 +8,6 @@
 
 Advanced Machine Learning package dedicated to model interpretability, with a primary focus on leveraging Shapley values for explaining complex predictive models.
 
-
 # ReadTheDocs
 
 Check out the package documentation on [ReadTheDocs](https://mlexplainer.readthedocs.io/en/latest/index.html)!
@@ -23,11 +22,10 @@ pip install mlexplainer
 
 # Why MLExplainer ?
 
-**MlExplainer** is a tool to address a massive question about advanced Machine Learning model in tabular data. 
+**MlExplainer** is a tool designed to tackle a major challenge in advanced Machine Learning for tabular data.
 
-Indeed, people often see advanced Machine Learning model (such as Boosting Models) as black-boxes. As of today, 
-we want to provide a way to explain ML models through mathematics concept and be able to present the good working of a model
-to everyone.
+Indeed, advanced Machine Learning models—such as Boosting algorithms—are often perceived as black boxes. 
+Today, our goal is to provide a way to demystify these models by leveraging mathematical concepts, making it possible to clearly explain how they work to any audience.
 
 Key Features :
 
