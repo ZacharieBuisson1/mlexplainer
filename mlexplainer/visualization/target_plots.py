@@ -5,9 +5,11 @@ including numerical and categorical features, as well as handling missing values
 
 from pandas import concat, DataFrame, Series
 from numpy import nan
+import matplotlib.pyplot as plt
 
 from matplotlib import ticker
 from matplotlib.axes import Axes
+
 
 from mlexplainer.utils.quantiles import group_values
 from mlexplainer.utils.data_processing import target_groupby_category
@@ -82,41 +84,47 @@ def add_nans(
     return ax
 
 
-def plot_feature_target_numerical_binary(
-    dataframe: DataFrame,
-    target_serie: Series,
-    feature: str,
-    q: int,
-    ax: Axes,
-    delta: float,
-) -> Axes:
-    """Plot the relationship between a feature and the target variable for binary classification.
+def set_centered_ylim(ax: Axes, center: float) -> Axes:
+    """Set the y-axis limits centered around a specified value.
+
     Args:
-        dataframe (DataFrame): DataFrame containing the feature and target variable.
-        target_serie (Series): Series representing the target variable.
-        feature (str): The feature name to plot.
-        q (int): Number of quantiles.
-        ax (Axes): Matplotlib axis to plot on.
-        delta (float): Delta value for adjusting plot limits.
+        ax (Axes): Matplotlib axis to set limits for.
+        center (float): Center value around which to set the limits.
     Returns:
-        Axes: Matplotlib axis with the feature-target plot.
+        Axes: Matplotlib axis with updated y-axis limits.
     """
 
-    ax, used_q = plot_feature_numerical_target(
-        dataframe[feature],
-        target_serie,
-        q,
-        ax,
-        delta,
-        target_serie.mean(),
-    )
+    ymin, ymax = ax.get_ylim()
+    max_offset = max(center - ymin, ymax - center)
+    ax.set_ylim(center - max_offset, center + max_offset)
 
-    # set up a label for the feature
-    feature_label = feature
-    if used_q is not None:
-        feature_label = f"{feature_label}, q={used_q}"
+    return ax
 
-    ax.set_xlabel(feature_label, fontsize="large")
+
+def reformat_y_axis(
+    ax: Axes,
+    color: tuple[float, float, float] = (0.28, 0.18, 0.71),
+) -> Axes:
+    """Refactor the y-axis of a plot.
+    Args:
+        ax (Axes): Matplotlib axis to refactor.
+        color (tuple[float, float, float]): Color for the y-axis label and ticks.
+    Returns:
+        Axes: Matplotlib axis with refactored y-axis.
+    """
+
+    # Transform tick to percent
+    ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
+
+    # Change the label
+    ax.set_ylabel("Taux de cible", fontsize="large", color=color)
+
+    # Change size of ticks
+    ax.tick_params(axis="y", labelsize="large")
+
+    # Change color of ticks
+    for tick in ax.get_yticklabels():
+        tick.set_color(color)
 
     return ax
 
@@ -128,6 +136,7 @@ def plot_feature_numerical_target(
     ax,
     delta: float,
     ymean: float,
+    threshold_nb_values: float = 15,
     color: tuple[float, float, float] = (0.28, 0.18, 0.71),
 ) -> tuple[Axes, int | None]:
     """Plot the relationship between a feature and the target variable.
@@ -146,12 +155,14 @@ def plot_feature_numerical_target(
 
     xmin, xmax = x.min(), x.max()  # Define observed min and max
 
-    stats, used_q = group_values(x, y, q)  # Creation of stats
+    stats, used_q = group_values(
+        x, y, q, threshold_nb_values
+    )  # Creation of stats
     nan_observation = stats.query("group != group")  # Gather missing values
     stats = stats.query("group == group")  # Select only non-missing values
 
     # If it's discrete features
-    if not q or x.nunique() < 15:
+    if not q or x.nunique() < threshold_nb_values:
         stats_to_plot = stats
     # If it is continuous values
     else:
@@ -183,6 +194,46 @@ def plot_feature_numerical_target(
     ax = reformat_y_axis(ax, color)
 
     return ax, used_q
+
+
+def plot_feature_target_numerical_binary(
+    dataframe: DataFrame,
+    target_serie: Series,
+    feature: str,
+    q: int,
+    ax: Axes,
+    delta: float,
+    threshold_nb_values: float = 15,
+) -> Axes:
+    """Plot the relationship between a feature and the target variable for binary classification.
+    Args:
+        dataframe (DataFrame): DataFrame containing the feature and target variable.
+        target_serie (Series): Series representing the target variable.        feature (str): The feature name to plot.
+        q (int): Number of quantiles.
+        ax (Axes): Matplotlib axis to plot on.
+        delta (float): Delta value for adjusting plot limits.
+    Returns:
+        Axes: Matplotlib axis with the feature-target plot.
+    """
+
+    ax, used_q = plot_feature_numerical_target(
+        dataframe[feature],
+        target_serie,
+        q,
+        ax,
+        delta,
+        target_serie.mean(),
+        threshold_nb_values=threshold_nb_values,
+    )
+
+    # set up a label for the feature
+    feature_label = feature
+    if used_q is not None:
+        feature_label = f"{feature_label}, q={used_q}"
+
+    ax.set_xlabel(feature_label, fontsize="large")
+
+    return ax
 
 
 def plot_feature_target_categorical_binary(
@@ -240,46 +291,135 @@ def plot_feature_target_categorical_binary(
     return ax
 
 
-def set_centered_ylim(ax: Axes, center: float) -> Axes:
-    """Set the y-axis limits centered around a specified value.
+def plot_feature_target_numerical_multilabel(
+    dataframe: DataFrame,
+    target_serie: Series,
+    feature: str,
+    q: int = 20,
+    delta: float = 0.1,
+    figsize: tuple = (15, 8),
+    dpi: int = 100,
+    threshold_nb_values: float = 15,
+) -> None:
+    """Plot the relationship between a numerical feature and all target modalities with SHAP values.
 
     Args:
-        ax (Axes): Matplotlib axis to set limits for.
-        center (float): Center value around which to set the limits.
-    Returns:
-        Axes: Matplotlib axis with updated y-axis limits.
+        dataframe (DataFrame): DataFrame containing the feature and target variable.
+        target_serie (Series): Series representing the target variable.
+        feature (str): The feature name to plot.
+        modalities (list): List of unique target modalities.
+        shap_values (ndarray, optional): SHAP values for the training features.
+        q (int, optional): Number of quantiles. Defaults to 20.
+        figsize (tuple, optional): Figure size for the plot. Defaults to (15, 8).
+        dpi (int, optional): Dots per inch for the plot. Defaults to 100.
     """
+    # Get unique modalities in the target variable
+    modalities = target_serie.unique()
 
-    ymin, ymax = ax.get_ylim()
-    max_offset = max(center - ymin, ymax - center)
-    ax.set_ylim(center - max_offset, center + max_offset)
+    # Calculate subplot layout
+    rows = (len(modalities) + 2) // 3  # 3 plots per row
+    adjusted_figsize = (figsize[0], figsize[1] * rows / 2)
+    fig, axes = plt.subplots(rows, 3, figsize=adjusted_figsize, dpi=dpi)
+    axes = axes.flatten()
 
-    return ax
+    if len(modalities) == 1:
+        axes = [axes]
+
+    for i, modality in enumerate(modalities):
+
+        ax = axes[i]
+
+        # Create binary target for this modality
+        y_binary = Series((target_serie == modality).astype(int))
+
+        # Plot feature-target relationship
+        ax, _ = plot_feature_numerical_target(
+            dataframe[feature],
+            y_binary,
+            q,
+            ax,
+            delta,
+            y_binary.mean(),
+            threshold_nb_values=threshold_nb_values,
+        )
+
+        ax.set_xlabel(f"{feature} values", fontsize="large")
+        ax.set_title(f"Target Modality: {modality}", fontsize="large")
+        ax.set_ylabel("Taux de cible", fontsize="large")
+
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+
+    return axes
 
 
-def reformat_y_axis(
-    ax: Axes,
+def plot_feature_target_categorical_multilabel(
+    dataframe: DataFrame,
+    target_serie: Series,
+    feature: str,
+    modalities: list,
+    figsize: tuple = (15, 8),
+    dpi: int = 200,
     color: tuple[float, float, float] = (0.28, 0.18, 0.71),
-) -> Axes:
-    """Refactor the y-axis of a plot.
+) -> None:
+    """Plot the relationship between a categorical feature and all target modalities with SHAP values.
+
     Args:
-        ax (Axes): Matplotlib axis to refactor.
-        color (tuple[float, float, float]): Color for the y-axis label and ticks.
-    Returns:
-        Axes: Matplotlib axis with refactored y-axis.
+        dataframe (DataFrame): DataFrame containing the feature and target variable.
+        target_serie (Series): Series representing the target variable.
+        feature (str): The feature name to plot.
+        modalities (list): List of unique target modalities.
+        shap_values (ndarray, optional): SHAP values for the training features.
+        figsize (tuple, optional): Figure size for the plot. Defaults to (15, 8).
+        dpi (int, optional): Dots per inch for the plot. Defaults to 200.
     """
+    # Prepare the plot
+    feature_train = dataframe[feature].copy()
 
-    # Transform tick to percent
-    ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
+    # Calculate subplot layout
+    rows = (len(modalities) + 2) // 3  # 3 plots per row
+    adjusted_figsize = (figsize[0], figsize[1] * rows / 2)
+    fig, axes = plt.subplots(
+        rows, 3, figsize=adjusted_figsize, dpi=dpi, sharex=True
+    )
+    axes = axes.flatten()
 
-    # Change the label
-    ax.set_ylabel("Taux de cible", fontsize="large", color=color)
+    if len(modalities) == 1:
+        axes = [axes]
 
-    # Change size of ticks
-    ax.tick_params(axis="y", labelsize="large")
+    for i, modality in enumerate(modalities):
+        ax = axes[i]
 
-    # Change color of ticks
-    for tick in ax.get_yticklabels():
-        tick.set_color(color)
+        # Create binary target for this modality
+        y_binary = (target_serie == modality).astype(int)
+        mean_target = y_binary.mean()
 
-    return ax
+        # First part - printing information for observed values
+        stats_to_plot = target_groupby_category(dataframe, feature, y_binary)
+        ax.plot(
+            stats_to_plot["group"],
+            stats_to_plot["mean_target"],
+            "o",
+            color=color,
+        )
+        num_categories = feature_train.value_counts().shape[0]
+        ax.hlines(
+            mean_target,
+            -0.5,
+            num_categories - 0.5,
+            linestyle="--",
+            color=color,
+        )
+
+        # Determine the center points
+        y_center = mean_target
+        ax = set_centered_ylim(ax, y_center)
+
+        # Transform tick to percent
+        ax = reformat_y_axis(ax, color)
+
+        # set up a label for the feature
+        feature_label = feature
+        ax.set_xlabel(feature_label, fontsize="large")
+
+    return axes

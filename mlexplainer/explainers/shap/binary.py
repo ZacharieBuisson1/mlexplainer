@@ -103,7 +103,9 @@ class BinaryMLExplainer(BaseMLExplainer):
         """
         results = {}
         for feature in self.features:
-            results[feature] = self._validate_feature_interpretation(feature, q)
+            results[feature] = self._validate_feature_interpretation(
+                feature, q
+            )
         return results
 
     def _validate_feature_interpretation(
@@ -126,7 +128,9 @@ class BinaryMLExplainer(BaseMLExplainer):
             list: List of tuples with validation results for each group/category.
         """
         if feature not in self.features:
-            raise ValueError(f"Feature '{feature}' not found in features list.")
+            raise ValueError(
+                f"Feature '{feature}' not found in features list."
+            )
 
         shap_values = self.shap_values_train
 
@@ -142,7 +146,9 @@ class BinaryMLExplainer(BaseMLExplainer):
 
         if is_continuous:
             # For continuous features, use quantile-based grouping
-            grouped_data, _ = group_values(self.x_train[feature], self.y_train, q)
+            grouped_data, _ = group_values(
+                self.x_train[feature], self.y_train, q
+            )
 
             # Create interpretation dictionaries
             observed_interpretation = {}
@@ -152,9 +158,15 @@ class BinaryMLExplainer(BaseMLExplainer):
             quantiles_values = None
             if not (q is None or self.x_train[feature].nunique() <= 15):
                 # Prepare quantile boundaries for later use
-                quantiles = arange(1 / len(grouped_data), 1, 1 / len(grouped_data))
-                quantiles = [quant for quant in quantiles if not isclose(quant, 1)]
-                quantiles_values = list(self.x_train[feature].quantile(quantiles)) + [inf]
+                quantiles = arange(
+                    1 / len(grouped_data), 1, 1 / len(grouped_data)
+                )
+                quantiles = [
+                    quant for quant in quantiles if not isclose(quant, 1)
+                ]
+                quantiles_values = list(
+                    self.x_train[feature].quantile(quantiles)
+                ) + [inf]
 
             for _, row in grouped_data.iterrows():
                 group_val = row["group"]
@@ -175,7 +187,9 @@ class BinaryMLExplainer(BaseMLExplainer):
                     else:
                         group_mask = (
                             self.x_train[feature].apply(
-                                lambda val: is_in_quantile(val, quantiles_values)
+                                lambda val: is_in_quantile(
+                                    val, quantiles_values
+                                )
                             )
                             == group_val
                         )
@@ -197,7 +211,9 @@ class BinaryMLExplainer(BaseMLExplainer):
                         group_intervals[key] = (key, key)
             else:
                 # For quantile-based grouping, create interval boundaries
-                sorted_groups = sorted([k for k in observed_interpretation.keys() if k == k])  # Filter out NaN
+                sorted_groups = sorted(
+                    [k for k in observed_interpretation.keys() if k == k]
+                )  # Filter out NaN
                 for i, group_val in enumerate(sorted_groups):
                     if i == 0:
                         start_val = self.x_train[feature].min()
@@ -244,7 +260,8 @@ class BinaryMLExplainer(BaseMLExplainer):
                 (
                     round(float(group_intervals[key][0]), 3),  # start_key
                     round(float(group_intervals[key][1]), 3),  # end_key
-                    observed_interpretation[key] == shap_interpretation[key],  # is_consistent
+                    observed_interpretation[key]
+                    == shap_interpretation[key],  # is_consistent
                 )
                 for key in observed_interpretation.keys()
             ]
@@ -269,7 +286,8 @@ class BinaryMLExplainer(BaseMLExplainer):
 
         relative_importance = (
             (
-                absolute_shap_values.mean().divide(mean_absolute_shap_values) * 100
+                absolute_shap_values.mean().divide(mean_absolute_shap_values)
+                * 100
             )
             .reset_index(drop=False)
             .rename(columns={"index": "features", 0: "importances"})
@@ -319,8 +337,15 @@ class BinaryMLExplainer(BaseMLExplainer):
 
             # plot feature target
             q = kwargs.get("q", 20)
+            threshold_nb_values = kwargs.get("threshold_nb_values", 15)
             ax = plot_feature_target_numerical_binary(
-                self.x_train, self.y_train, feature, q, ax, delta
+                self.x_train,
+                self.y_train,
+                feature,
+                q,
+                ax,
+                delta,
+                threshold_nb_values=threshold_nb_values,
             )
 
             # plot SHAP values

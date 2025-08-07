@@ -1,249 +1,350 @@
-"""Multilabel explainer functionality for SHAP-based explanations."""
+"""MultilabelMLExplainer for multilabel classification tasks.
+This module provides an implementation of the BaseMLExplainer for multilabel classification tasks,
+including methods to explain numerical and categorical features using SHAP values.
+"""
 
 from typing import Callable, List
 
 import matplotlib.pyplot as plt
-from numpy import ndarray
+from numpy import ndarray, inf, arange, isclose, nan
 from pandas import DataFrame, Series
 
 from mlexplainer.core import BaseMLExplainer
 from mlexplainer.explainers.shap.wrapper import ShapWrapper
+from mlexplainer.visualization import (
+    plot_feature_target_numerical_multilabel,
+    plot_feature_target_categorical_multilabel,
+    plot_shap_values_numerical_multilabel,
+    plot_shap_values_categorical_multilabel,
+)
 from mlexplainer.utils.data_processing import (
     get_index_of_features,
-    target_groupby_category,
 )
+from mlexplainer.utils.quantiles import group_values, is_in_quantile
 
 
-def feature_interpretation_multimodal(
-    feature: str,
-    x_train: DataFrame,
-    y_train: Series,
-    shap_values: ndarray = None,
-    q: int = 20,
-    feature_label: str = None,
-    figsize: tuple = (15, 8),
-    dpi: int = 100,
-) -> None:
-    """Interpret the impact of a feature on each modality of the target variable.
+class MultilabelMLExplainer(BaseMLExplainer):
+    """MultilabelMLExplainer for multilabel classification tasks."""
 
-    Args:
-        feature (str): The feature name to interpret.
-        x_train (DataFrame): Training feature values.
-        y_train (Series): Training target values (categorical or multi-modal).
-        shap_values (ndarray, optional): SHAP values for the training features. Defaults to None.
-        q (int, optional): Number of quantiles. Defaults to 20.
-        feature_label (str, optional): Label for the feature. Defaults to None.
-        figsize (tuple, optional): Figure size for the plot. Defaults to (15, 8).
-        dpi (int, optional): Dots per inch for the plot. Defaults to 100.
-    """
-    # Get unique modalities in the target variable
-    modalities = y_train.unique()
+    def __init__(
+        self,
+        x_train: DataFrame,
+        y_train: Series,
+        features: List[str],
+        model: Callable,
+        global_explainer: bool = True,
+        local_explainer: bool = True,
+    ):
+        """
+        Initialize the MultilabelMLExplainer with training data, features, and model.
+        Args:
+            x_train (DataFrame): Training feature values.
+            y_train (Series): Training target values (multilabel).
+            features (List[str]): List of feature names to interpret.
+            model (Callable): The machine learning model to explain.
+        Raises:
+            ValueError: If x_train or y_train is None, or if features are not provided
+                        or not present in x_train.
+            ValueError: If any feature in features is not present in x_train.
+            ValueError: If no features are provided.
+        """
+        if y_train.nunique() < 2:
+            raise ValueError(
+                "y_train must have at least two unique values for multilabel classification."
+            )
 
-    # Calculate the number of rows and columns for subplots
-    rows = (len(modalities) + 2) // 3  # 3 plots per row
-    adjusted_figsize = (
-        figsize[0],
-        figsize[1] * rows / 2,
-    )  # Adjust height based on rows
-    fig, axes = plt.subplots(
-        rows, 3, figsize=adjusted_figsize, dpi=dpi, sharex=True
-    )
-    axes = axes.flatten()  # Flatten the axes array for easier indexing
+        super().__init__(
+            x_train,
+            y_train,
+            features,
+            model,
+            global_explainer,
+            local_explainer,
+        )
 
-    if len(modalities) == 1:
-        axes = [axes]  # Ensure axes is iterable for a single modality
+        self.shap_values_train = ShapWrapper(self.model).calculate(
+            dataframe=self.x_train, features=self.features
+        )
+        self.modalities = self.y_train.unique()
+        self.ymean_train = self.y_train.mean()
 
-    x_train_serie = x_train[feature].copy()
+    def explain(self, **kwargs):
+        """Explain the features for multilabel classification.
+        This method interprets the features based on the training data and SHAP values.
+        Args:
+            **kwargs: Additional keyword arguments for customization, such as:
+                - figsize: Tuple for figure size (default: (15, 8))
+                - dpi: Dots per inch for the plot (default: 100)
+                - q: Number of quantiles for plotting (default: 20)
+        """
 
-    if x_train[feature].dtype == "category":
-        xmin, xmax = 0, x_train[feature].value_counts().shape[0] - 1
-    else:
-        xmin, xmax = x_train_serie.min(), x_train_serie.max()
+        if self.global_explainer:
+            # plot a global features importance
+            self._explain_global_features(**kwargs)
 
-    delta = (xmax - xmin) / 10
+        if self.local_explainer:
+            # check if num features are corrects
+            self._explain_numerical(**kwargs)
 
-    for i, modality in enumerate(modalities):
-        ax = axes[i]
+            # check if cat features are corrects
+            self._explain_categorical(**kwargs)
 
-        # Create a temporary binary target for the current modality
-        y_temp = (y_train == modality).astype(int)
+    def correctness_features(
+        self,
+        q=None,
+    ) -> dict:
+        """Analyze the correctness of the analysis for every feature.
 
-        if feature_label is None:
-            feature_label = feature
+        This method validates interpretation consistency between actual target rates
+        and SHAP values for all features in the explainer for multilabel classification.
 
-        ax.set_title(f"Target Modality: {modality}", fontsize="large")
-        ax.set_ylabel("Probability", fontsize="large")
+        Args:
+            q (int): Number of quantiles for continuous features. If None, uses adaptive quantiles.
 
-        # Add SHAP values if provided
-        if shap_values is not None:
-            ax2 = ax.twinx()
-            index_feature_train = get_index_of_features(x_train, feature)
+        Returns:
+            dict: Dictionary with feature names as keys and modality-specific correctness results as values.
+        """
+        results = {}
+        for feature in self.features:
+            results[feature] = self._validate_feature_interpretation(
+                feature, q
+            )
+        return results
+
+    def _validate_feature_interpretation(
+        self,
+        feature: str,
+        q=None,
+    ) -> dict:
+        """Validate the interpretation consistency for a single feature across all modalities.
+
+        Args:
+            feature (str): The feature name to validate.
+            q (int): Number of quantiles for continuous features. If None, uses adaptive quantiles.
+
+        Returns:
+            dict: Dictionary with modality names as keys and validation results as values.
+        """
+        if feature not in self.features:
+            raise ValueError(
+                f"Feature '{feature}' not found in features list."
+            )
+
+        shap_values = self.shap_values_train
+        if shap_values is None:
+            return {modality: False for modality in self.modalities}
+
+        # Get feature index for SHAP values
+        feature_index = get_index_of_features(self.x_train, feature)
+        results = {}
+
+        # Validate for each modality
+        for i, modality in enumerate(self.modalities):
+            # Create binary target for this modality
+            y_binary = (self.y_train == modality).astype(int)
+            ymean_binary = y_binary.mean()
 
             # Get SHAP values for this modality
             if shap_values.ndim == 3:  # Multi-output SHAP values
-                shap_values_modality = shap_values[:, index_feature_train, i]
-            else:  # Single output - treat as binary for this modality
-                shap_values_modality = shap_values[:, index_feature_train]
+                feature_shap_values = shap_values[:, feature_index, i]
+            else:  # Single output - use as is
+                feature_shap_values = shap_values[:, feature_index]
 
-            # Simple scatter plot of SHAP values
-            ax2.scatter(
-                x_train_serie,
-                shap_values_modality,
-                alpha=0.6,
-                s=2,
+            # Determine if feature is continuous or discrete
+            is_continuous = feature in self.numerical_features
+
+            if is_continuous:
+                # For continuous features, use quantile-based grouping
+                grouped_data, _ = group_values(
+                    self.x_train[feature], y_binary, q
+                )
+
+                matches = []
+                quantiles_values = None
+                if not (q is None or self.x_train[feature].nunique() <= 15):
+                    quantiles = arange(
+                        1 / len(grouped_data), 1, 1 / len(grouped_data)
+                    )
+                    quantiles = [
+                        quant for quant in quantiles if not isclose(quant, 1)
+                    ]
+                    quantiles_values = list(
+                        self.x_train[feature].quantile(quantiles)
+                    ) + [inf]
+
+                for _, row in grouped_data.iterrows():
+                    group_val = row["group"]
+                    target_rate = row["target"]
+
+                    # Get observations for this group
+                    if group_val != group_val:  # NaN case
+                        group_mask = self.x_train[feature].isna()
+                    else:
+                        if q is None or self.x_train[feature].nunique() <= 15:
+                            group_mask = self.x_train[feature] == group_val
+                        else:
+                            group_mask = (
+                                self.x_train[feature].apply(
+                                    lambda val: is_in_quantile(
+                                        val, quantiles_values
+                                    )
+                                )
+                                == group_val
+                            )
+
+                    # Compare interpretations
+                    observed_interp = (
+                        "above" if target_rate > ymean_binary else "below"
+                    )
+                    shap_mean = feature_shap_values[group_mask].mean()
+                    shap_interp = "above" if shap_mean > 0 else "below"
+
+                    matches.append((group_val, observed_interp == shap_interp))
+
+                results[modality] = matches
+
+            else:
+                # For discrete/categorical features
+                feature_values = self.x_train[feature]
+                unique_values = feature_values.unique()
+                matches = []
+
+                for value in unique_values:
+                    mask = feature_values == value
+                    target_rate = y_binary[mask].mean()
+                    shap_mean = feature_shap_values[mask].mean()
+
+                    observed_interp = (
+                        "above" if target_rate > ymean_binary else "below"
+                    )
+                    shap_interp = "above" if shap_mean > 0 else "below"
+
+                    matches.append((value, observed_interp == shap_interp))
+
+                results[modality] = matches
+
+        return results
+
+    def _explain_global_features(self, **kwargs):
+        """Interpret global features for multilabel classification."""
+        # Calculate absolute SHAP values across all modalities
+        if self.shap_values_train.ndim == 3:
+            # For multi-output, sum across modalities
+            absolute_shap_values = DataFrame(
+                self.shap_values_train.mean(axis=2), columns=self.features
+            ).apply(abs)
+        else:
+            absolute_shap_values = DataFrame(
+                self.shap_values_train, columns=self.features
+            ).apply(abs)
+
+        # Calculate relative importance
+        mean_absolute_shap_values = absolute_shap_values.mean().sum()
+        relative_importance = (
+            (
+                absolute_shap_values.mean().divide(mean_absolute_shap_values)
+                * 100
+            )
+            .reset_index(drop=False)
+            .rename(columns={"index": "features", 0: "importances"})
+            .sort_values(by="importances", ascending=True)
+        )
+
+        figsize = kwargs.get("figsize", (15, 8))
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+        # Plot with horizontal bar chart
+        ax.barh(
+            relative_importance["features"], relative_importance["importances"]
+        )
+
+        # Set title and labels
+        ax.set_title(
+            "Global Feature Importance for Multilabel Classification (Mean of the absolute SHAP values)"
+        )
+        ax.set_xlabel("Relative Importance (%)")
+        ax.set_ylabel("Features")
+
+        for _, row in relative_importance.iterrows():
+            ax.text(
+                row.importances,
+                row.features,
+                s=" " + str(round(row.importances, 1)) + "%.",
+                va="center",
             )
 
-            # Align and center the secondary y-axis (SHAP values) with the primary y-axis (real mean target)
-            primary_ymin, primary_ymax = (
-                ax.get_ylim()
-            )  # Get primary y-axis limits
-            shap_min, shap_max = (
-                shap_values_modality.min(),
-                shap_values_modality.max(),
+        plt.show()
+
+    def _explain_numerical(self, **kwargs):
+        """Interpret numerical features for multilabel classification."""
+        for feature in self.numerical_features:
+
+            min_value_train, max_value_train = calculate_min_max_value(
+                self.x_train, feature
             )
 
-            # Determine the center points
-            primary_center = y_temp.mean()
+            # calculate delta
+            delta = (max_value_train - min_value_train) / 10
 
-            # Calculate the maximum range to ensure symmetry
-            max_primary_offset = max(
-                primary_center - primary_ymin, primary_ymax - primary_center
+            # Plot feature-target relationship with SHAP values
+            figsize = kwargs.get("figsize", (15, 8))
+            dpi = kwargs.get("dpi", 100)
+            # _, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+            q = kwargs.get("q", 20)
+            threshold_nb_values = kwargs.get("threshold_nb_values", 15)
+            axes = plot_feature_target_numerical_multilabel(
+                self.x_train,
+                self.y_train,
+                feature,
+                q,
+                delta,
+                figsize,
+                dpi,
+                threshold_nb_values=threshold_nb_values,
             )
-            max_shap_offset = max(abs(shap_min), abs(shap_max))
 
-            # Set the limits for the primary y-axis (centered around ymean_train)
-            ax.set_ylim(
-                primary_center - max_primary_offset,
-                primary_center + max_primary_offset,
+            modalities = self.y_train.unique()
+            axes = plot_shap_values_numerical_multilabel(
+                x_train=self.x_train,
+                y_train=self.y_train,
+                feature=feature,
+                shap_values_train=self.shap_values_train,
+                axes=axes,
+                delta=delta,
             )
 
-            # Set the limits for the secondary y-axis (centered around 0)
-            ax2.set_ylim(-max_shap_offset, max_shap_offset)
+        plt.show()
 
-    # Hide unused subplots
-    for j in range(len(modalities), len(axes)):
-        fig.delaxes(axes[j])
+    def _explain_categorical(self, **kwargs):
+        """Interpret categorical features for multilabel classification."""
+        for feature in self.categorical_features:
+            # Plot feature-target relationship with SHAP values
+            figsize = kwargs.get("figsize", (15, 8))
+            dpi = kwargs.get("dpi", 200)
+            color = kwargs.get("color", (0.28, 0.18, 0.71))
 
-    plt.xlabel(feature_label, fontsize="large")
-    plt.tight_layout()
-    plt.show()
+            plot_feature_target_categorical_multilabel(
+                self.x_train,
+                self.y_train,
+                feature,
+                self.modalities,
+                figsize,
+                dpi,
+                color,
+            )
 
 
-def feature_interpretation_multimodal_category(
-    feature: str,
-    x_train: DataFrame,
-    y_train: Series,
-    target: str,
-    shap_values: ndarray = None,
-    figsize: tuple = (15, 8),
-    dpi: int = 200,
-) -> None:
-    """Interpret the impact of a categorical feature on the target variable.
-
-    Args:
-        feature (str): The feature name to interpret.
-        x_train (DataFrame): Training feature values.
-        y_train (Series): Training target values.
-        target (str): Target column name.
-        shap_values (ndarray, optional): SHAP values for the training features. Defaults to None.
-        figsize (tuple, optional): Figure size for the plot. Defaults to (15, 8).
-        dpi (int, optional): Dots per inch for the plot. Defaults to 200.
+def calculate_min_max_value(dataframe: DataFrame, feature: str):
     """
-    # Get unique modalities in the target variable
-    modalities = y_train.unique()
+    Calculate the minimum and maximum values of a feature in a DataFrame.
+    Args:
+        dataframe (DataFrame): The DataFrame containing the feature.
+        feature (str): The name of the feature to calculate min and max values.
+    Returns:
+        tuple: A tuple containing the minimum and maximum values of the feature.
+    """
+    if dataframe[feature].dtype == "category":
+        return 0, dataframe[feature].value_counts().shape[0] - 1
 
-    # Calculate the number of rows and columns for subplots
-    rows = (len(modalities) + 2) // 3  # 3 plots per row
-    adjusted_figsize = (
-        figsize[0],
-        figsize[1] * rows / 2,
-    )  # Adjust height based on rows
-    _, axes = plt.subplots(
-        rows, 3, figsize=adjusted_figsize, dpi=dpi, sharex=True
-    )
-    axes = axes.flatten()  # Flatten the axes array for easier indexing
-
-    color = (0.28, 0.18, 0.71)
-    feature_train = x_train[feature].copy()
-    index_feature = get_index_of_features(x_train, feature)
-
-    for i, modality in enumerate(modalities):
-        ax = axes[i]
-
-        # Create a temporary binary target for the current modality
-        y_temp = (y_train == modality).astype(int)
-
-        if shap_values is not None:
-            shap_colors = [(0.12, 0.53, 0.9), (1.0, 0.5, 0.34)]
-
-            # Get SHAP values for this modality
-            if shap_values.ndim == 3:  # Multi-output SHAP values
-                shap_values_modality = shap_values[:, index_feature, i]
-            else:  # Single output
-                shap_values_modality = shap_values[:, index_feature]
-
-            colors = [shap_colors[int(u > 0)] for u in shap_values_modality]
-
-        tmp_x_train = x_train.copy()
-        tmp_x_train[target] = tmp_x_train[target].apply(
-            lambda u: int(u == modality)
-        )
-        stats_to_plot = target_groupby_category(tmp_x_train, feature, y_temp)
-
-        ax.plot(
-            stats_to_plot["group"],
-            stats_to_plot["mean_target"],
-            "o",
-            color=color,
-        )
-        ax.hlines(
-            y_temp.mean(),
-            0,
-            feature_train.value_counts().shape[0] - 1,
-            linestyle="--",
-            color=color,
-        )
-
-        ax.set_title(f"Target Modality: {modality}", fontsize="large")
-        ax.set_ylabel("Probability", fontsize="large")
-
-        if shap_values is not None:
-            ax2 = ax.twinx()
-            feature_values = x_train[feature].copy()
-            ax2.scatter(
-                feature_values,
-                shap_values_modality,
-                c=colors,
-                s=2,
-                alpha=1,
-            )
-
-            # Align and center the secondary y-axis (SHAP values) with the primary y-axis (real mean target)
-            primary_ymin, primary_ymax = (
-                ax.get_ylim()
-            )  # Get primary y-axis limits
-            shap_min, shap_max = (
-                shap_values_modality.min(),
-                shap_values_modality.max(),
-            )
-
-            # Determine the center points
-            ymean_train = y_temp.mean()
-            primary_center = ymean_train
-
-            # Calculate the maximum range to ensure symmetry
-            max_primary_offset = max(
-                primary_center - primary_ymin, primary_ymax - primary_center
-            )
-            max_shap_offset = max(abs(shap_min), abs(shap_max))
-
-            # Set the limits for the primary y-axis (centered around ymean_train)
-            ax.set_ylim(
-                primary_center - max_primary_offset,
-                primary_center + max_primary_offset,
-            )
-
-            # Set the limits for the secondary y-axis (centered around 0)
-            ax2.set_ylim(-max_shap_offset, max_shap_offset)
-
-    plt.show()
+    return dataframe[feature].min(), dataframe[feature].max()

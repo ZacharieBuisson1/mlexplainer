@@ -58,7 +58,9 @@ def nb_min_quantiles(x: DataFrame, q: int = None) -> int:
     return nb_quantile
 
 
-def group_values(x: Series, y: Series, q: int) -> tuple[DataFrame, int]:
+def group_values(
+    x: Series, y: Series, q: int, threshold_nb_values: float = 15
+) -> tuple[DataFrame, int]:
     """Create a new DataFrame of cut values.
 
     Args:
@@ -81,7 +83,7 @@ def group_values(x: Series, y: Series, q: int) -> tuple[DataFrame, int]:
 
     if q is None:
         df["group"] = df["value"]
-    elif x.nunique() <= 15:
+    elif x.nunique() <= threshold_nb_values:
         df["group"] = df["value"]
     else:
         q = nb_min_quantiles(x, q)
