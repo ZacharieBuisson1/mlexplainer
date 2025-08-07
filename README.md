@@ -14,7 +14,7 @@ Check out the package documentation on [ReadTheDocs](https://mlexplainer.readthe
 
 # Install
 
-**AutoCarver** can be installed from [PyPI](https://pypi.org/project/mlexplainer/):
+**MLExplainer** can be installed from [PyPI](https://pypi.org/project/mlexplainer/):
 
 <pre>
 pip install mlexplainer
@@ -24,7 +24,7 @@ pip install mlexplainer
 
 **MlExplainer** is a tool designed to tackle a major challenge in advanced Machine Learning for tabular data.
 
-Indeed, advanced Machine Learning models—such as Boosting algorithms—are often perceived as black boxes. 
+Indeed, advanced Machine Learning models - such as Boosting algorithms - are often perceived as black boxes. 
 Today, our goal is to provide a way to demystify these models by leveraging mathematical concepts, making it possible to clearly explain how they work to any audience.
 
 Key Features :
