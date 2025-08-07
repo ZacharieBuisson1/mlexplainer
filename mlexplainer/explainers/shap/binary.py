@@ -139,7 +139,6 @@ class BinaryMLExplainer(BaseMLExplainer):
             )
         return results
 
-
     def _explain_global_features(self, **kwargs):
         """Interpret global features for binary classification."""
         # calculate the absolute value for each features
@@ -161,7 +160,7 @@ class BinaryMLExplainer(BaseMLExplainer):
         )
 
         figsize = kwargs.get("figsize", (15, 8))
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        _, ax = plt.subplots(1, 1, figsize=figsize)
 
         # plot with horizontal bar chart
         ax.barh(
@@ -187,8 +186,8 @@ class BinaryMLExplainer(BaseMLExplainer):
 
     def _explain_numerical(self, **kwargs):
         """Interpret numerical features for binary classification.
-        This method visualizes the relationship between numerical features and the target variable,
-        and plots SHAP values for each numerical feature.
+        This method visualizes the relationship between numerical features and
+        the target variable, and plots SHAP values for each numerical feature.
         Args:
             **kwargs: Additional keyword arguments for customization, such as:
                 - figsize: Tuple for figure size (default: (15, 8))

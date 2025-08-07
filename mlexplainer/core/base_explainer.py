@@ -1,3 +1,7 @@
+"""Base class for Machine Learning Explainers.
+This class is designed to be subclassed for specific machine learning models.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Any, Callable, List, Optional
 
@@ -67,7 +71,7 @@ class BaseMLExplainer(ABC):
             raise ValueError("At least one feature must be provided.")
 
         if not all(
-            [feature in self.x_train.columns for feature in self.features]
+            feature in self.x_train.columns for feature in self.features
         ):
             raise ValueError(
                 "All features must be present in x_train. Missing features: "
@@ -83,7 +87,6 @@ class BaseMLExplainer(ABC):
         Returns:
             None: This method does not return anything, it modifies the state of the explainer.
         """
-        pass
 
     @abstractmethod
     def correctness_features(
@@ -102,4 +105,3 @@ class BaseMLExplainer(ABC):
         Returns:
             dict: Dictionary with feature names as keys and correctness results as values.
         """
-        pass

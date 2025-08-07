@@ -22,10 +22,12 @@ def validate_single_feature_interpretation(
     q: Optional[int] = None,
     threshold_nb_values: int = 15,
 ) -> Union[list[tuple[str, str, bool]]]:
-    """Validate interpretation consistency between actual target rates and SHAP values for a single feature.
+    """Validate interpretation consistency between actual target rates and SHAP
+    values for a single feature.
 
     This function compares feature impact by analyzing:
-    - For continuous features: divides values into quantiles and compares target rates vs SHAP values
+    - For continuous features: divides values into quantiles and compares target
+        rates vs SHAP values
     - For discrete features: compares target rates by category vs SHAP values
     - Handles missing values as a separate category
 

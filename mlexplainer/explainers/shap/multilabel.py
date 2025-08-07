@@ -6,7 +6,6 @@ including methods to explain numerical and categorical features using SHAP value
 from typing import Callable, List
 
 import matplotlib.pyplot as plt
-from numpy import ndarray
 from pandas import DataFrame, Series
 
 from mlexplainer.core import BaseMLExplainer
@@ -187,7 +186,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
         )
 
         figsize = kwargs.get("figsize", (15, 8))
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        _, ax = plt.subplots(1, 1, figsize=figsize)
 
         # Plot with horizontal bar chart
         ax.barh(
@@ -196,7 +195,10 @@ class MultilabelMLExplainer(BaseMLExplainer):
 
         # Set title and labels
         ax.set_title(
-            "Global Feature Importance for Multilabel Classification (Mean of the absolute SHAP values)"
+            (
+                "Global Feature Importance for Multilabel Classification",
+                " (Mean of the absolute SHAP values)",
+            )
         )
         ax.set_xlabel("Relative Importance (%)")
         ax.set_ylabel("Features")
