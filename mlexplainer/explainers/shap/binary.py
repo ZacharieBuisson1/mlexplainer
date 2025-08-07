@@ -18,7 +18,10 @@ from mlexplainer.visualization import (
     plot_shap_values_numerical_binary,
 )
 from mlexplainer.utils.quantiles import group_values, is_in_quantile
-from mlexplainer.utils.data_processing import get_index_of_features
+from mlexplainer.utils.data_processing import (
+    get_index_of_features,
+    calculate_min_max_value,
+)
 
 
 class BinaryMLExplainer(BaseMLExplainer):
@@ -103,7 +106,9 @@ class BinaryMLExplainer(BaseMLExplainer):
         """
         results = {}
         for feature in self.features:
-            results[feature] = self._validate_feature_interpretation(feature, q)
+            results[feature] = self._validate_feature_interpretation(
+                feature, q
+            )
         return results
 
     def _validate_feature_interpretation(
@@ -126,7 +131,9 @@ class BinaryMLExplainer(BaseMLExplainer):
             list: List of tuples with validation results for each group/category.
         """
         if feature not in self.features:
-            raise ValueError(f"Feature '{feature}' not found in features list.")
+            raise ValueError(
+                f"Feature '{feature}' not found in features list."
+            )
 
         shap_values = self.shap_values_train
 
@@ -142,7 +149,9 @@ class BinaryMLExplainer(BaseMLExplainer):
 
         if is_continuous:
             # For continuous features, use quantile-based grouping
-            grouped_data, _ = group_values(self.x_train[feature], self.y_train, q)
+            grouped_data, _ = group_values(
+                self.x_train[feature], self.y_train, q
+            )
 
             # Create interpretation dictionaries
             observed_interpretation = {}
@@ -152,9 +161,15 @@ class BinaryMLExplainer(BaseMLExplainer):
             quantiles_values = None
             if not (q is None or self.x_train[feature].nunique() <= 15):
                 # Prepare quantile boundaries for later use
-                quantiles = arange(1 / len(grouped_data), 1, 1 / len(grouped_data))
-                quantiles = [quant for quant in quantiles if not isclose(quant, 1)]
-                quantiles_values = list(self.x_train[feature].quantile(quantiles)) + [inf]
+                quantiles = arange(
+                    1 / len(grouped_data), 1, 1 / len(grouped_data)
+                )
+                quantiles = [
+                    quant for quant in quantiles if not isclose(quant, 1)
+                ]
+                quantiles_values = list(
+                    self.x_train[feature].quantile(quantiles)
+                ) + [inf]
 
             for _, row in grouped_data.iterrows():
                 group_val = row["group"]
@@ -162,7 +177,13 @@ class BinaryMLExplainer(BaseMLExplainer):
 
                 # Determine observed interpretation (above/below global mean)
                 observed_interpretation[group_val] = (
-                    "above" if target_rate > self.ymean_train else "below"
+                    "above"
+                    if target_rate > self.ymean_train
+                    else (
+                        "below"
+                        if target_rate < self.ymean_train
+                        else "neutral"
+                    )
                 )
 
                 # Get SHAP values for this group
@@ -175,15 +196,22 @@ class BinaryMLExplainer(BaseMLExplainer):
                     else:
                         group_mask = (
                             self.x_train[feature].apply(
-                                lambda val: is_in_quantile(val, quantiles_values)
+                                lambda val: is_in_quantile(
+                                    val, quantiles_values
+                                )
                             )
                             == group_val
                         )
 
                 # Calculate mean SHAP value for this group
-                group_shap_mean = feature_shap_values[group_mask].mean()
+                if feature_shap_values[group_mask].shape[0] == 0:
+                    group_shap_mean = 0
+                else:
+                    group_shap_mean = feature_shap_values[group_mask].mean()
                 shap_interpretation[group_val] = (
-                    "above" if group_shap_mean > 0 else "below"
+                    "above"
+                    if group_shap_mean > 0
+                    else "below" if group_shap_mean < 0 else "neutral"
                 )
 
             # Now create interval mapping for all processed groups
@@ -197,7 +225,9 @@ class BinaryMLExplainer(BaseMLExplainer):
                         group_intervals[key] = (key, key)
             else:
                 # For quantile-based grouping, create interval boundaries
-                sorted_groups = sorted([k for k in observed_interpretation.keys() if k == k])  # Filter out NaN
+                sorted_groups = sorted(
+                    [k for k in observed_interpretation.keys() if k == k]
+                )  # Filter out NaN
                 for i, group_val in enumerate(sorted_groups):
                     if i == 0:
                         start_val = self.x_train[feature].min()
@@ -229,13 +259,21 @@ class BinaryMLExplainer(BaseMLExplainer):
                 mask = feature_values == value
                 target_rate = self.y_train[mask].mean()
                 observed_interpretation[value] = (
-                    "above" if target_rate > self.ymean_train else "below"
+                    "above"
+                    if target_rate > self.ymean_train
+                    else (
+                        "below"
+                        if target_rate < self.ymean_train
+                        else "neutral"
+                    )
                 )
 
                 # Calculate mean SHAP value for this category
                 shap_mean = feature_shap_values[mask].mean()
                 shap_interpretation[value] = (
-                    "above" if shap_mean > 0 else "below"
+                    "above"
+                    if shap_mean > 0
+                    else "below" if shap_mean < 0 else "neutral"
                 )
 
         # Compare interpretations and return results with intervals for continuous features
@@ -244,7 +282,8 @@ class BinaryMLExplainer(BaseMLExplainer):
                 (
                     round(float(group_intervals[key][0]), 3),  # start_key
                     round(float(group_intervals[key][1]), 3),  # end_key
-                    observed_interpretation[key] == shap_interpretation[key],  # is_consistent
+                    observed_interpretation[key]
+                    == shap_interpretation[key],  # is_consistent
                 )
                 for key in observed_interpretation.keys()
             ]
@@ -269,7 +308,8 @@ class BinaryMLExplainer(BaseMLExplainer):
 
         relative_importance = (
             (
-                absolute_shap_values.mean().divide(mean_absolute_shap_values) * 100
+                absolute_shap_values.mean().divide(mean_absolute_shap_values)
+                * 100
             )
             .reset_index(drop=False)
             .rename(columns={"index": "features", 0: "importances"})
@@ -319,8 +359,15 @@ class BinaryMLExplainer(BaseMLExplainer):
 
             # plot feature target
             q = kwargs.get("q", 20)
+            threshold_nb_values = kwargs.get("threshold_nb_values", 15)
             ax = plot_feature_target_numerical_binary(
-                self.x_train, self.y_train, feature, q, ax, delta
+                self.x_train,
+                self.y_train,
+                feature,
+                q,
+                ax,
+                delta,
+                threshold_nb_values=threshold_nb_values,
             )
 
             # plot SHAP values
@@ -333,7 +380,8 @@ class BinaryMLExplainer(BaseMLExplainer):
                 ax=ax,
             )
 
-        plt.show()
+            plt.show()
+            plt.close()
 
     def _explain_categorical(self, **kwargs):
         """Interpret categorical features for binary classification."""
@@ -352,19 +400,5 @@ class BinaryMLExplainer(BaseMLExplainer):
                 self.x_train, feature, self.shap_values_train, ax
             )
 
-        plt.show()
-
-
-def calculate_min_max_value(dataframe: DataFrame, feature: str):
-    """
-    Calculate the minimum and maximum values of a feature in a DataFrame.
-    Args:
-        dataframe (DataFrame): The DataFrame containing the feature.
-        feature (str): The name of the feature to calculate min and max values.
-    Returns:
-        tuple: A tuple containing the minimum and maximum values of the feature.
-    """
-    if dataframe[feature].dtype == "category":
-        return 0, dataframe[feature].value_counts().shape[0] - 1
-
-    return dataframe[feature].min(), dataframe[feature].max()
+            plt.show()
+            plt.close()
