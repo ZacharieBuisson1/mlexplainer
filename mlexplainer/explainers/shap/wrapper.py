@@ -11,6 +11,7 @@ class ShapWrapper:
     This class is designed to calculate SHAP values for a given model and
     features in a DataFrame. It uses the TreeExplainer from the SHAP library
     to compute the SHAP values based on the model's predictions.
+
     Attributes:
         model (Callable): The model to be wrapped for SHAP value calculation.
         model_output (str): The type of output from the model, e.g.,
@@ -37,9 +38,11 @@ class ShapWrapper:
         self, dataframe: DataFrame, features: list[str]
     ) -> DataFrame:
         """Calculate SHAP values for the given model and dataframe.
+
         Args:
             dataframe (DataFrame): The input DataFrame containing features.
             features (list[str]): List of feature names to calculate SHAP values for.
+
         Returns:
             DataFrame: A DataFrame containing SHAP values for the specified features.
         """

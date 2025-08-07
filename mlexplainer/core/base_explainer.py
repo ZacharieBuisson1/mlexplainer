@@ -9,7 +9,18 @@ from pandas import DataFrame, Series
 
 
 class BaseMLExplainer(ABC):
-    """Base class for Machine Learning Explainers."""
+    """Base class for Machine Learning Explainers.
+
+    This class provides a structure for interpreting features in machine learning models
+    and analyzing the correctness of the analysis for every feature.
+
+    Attributes:
+        x_train (DataFrame): Training feature values.
+        y_train (Series): Training target values.
+        features (List[str]): List of feature names to interpret.
+        model (Callable): The machine learning model to explain.
+        global_explainer (bool): Whether to use a global explainer.
+        local_explainer (bool): Whether to use a local explainer."""
 
     def __init__(
         self,
@@ -28,6 +39,7 @@ class BaseMLExplainer(ABC):
         interpreting features in machine learning models how see if the way a model
         understands features is correct.
         It also provides a way to analyze the correctness of the analysis for every feature.
+
         Args:
             x_train (DataFrame): Training feature values.
             y_train (Series): Training target values.
@@ -37,6 +49,7 @@ class BaseMLExplainer(ABC):
                                      Defaults to True.
             local_explainer (bool): Whether to use a local explainer.
                                      Defaults to True.
+
         Raises:
             ValueError: If x_train or y_train is None, or if features are not provided
                         or not present in x_train.
@@ -82,8 +95,10 @@ class BaseMLExplainer(ABC):
     def explain(self, **kwargs: Any) -> None:
         """Interpret features for the machine learning model.
         This method should be implemented in subclasses to provide specific interpretations.
+
         Args:
             **kwargs (Any): Additional keyword arguments for customization.
+
         Returns:
             None: This method does not return anything, it modifies the state of the explainer.
         """

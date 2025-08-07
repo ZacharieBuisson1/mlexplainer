@@ -6,9 +6,11 @@ from pandas import concat, DataFrame, Series, merge
 def calculate_min_max_value(dataframe: DataFrame, feature: str):
     """
     Calculate the minimum and maximum values of a feature in a DataFrame.
+
     Args:
         dataframe (DataFrame): The DataFrame containing the feature.
         feature (str): The name of the feature to calculate min and max values.
+
     Returns:
         tuple: A tuple containing the minimum and maximum values of the feature.
     """

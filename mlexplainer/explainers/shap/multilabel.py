@@ -39,6 +39,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
     ):
         """
         Initialize the MultilabelMLExplainer with training data, features, and model.
+
         Args:
             x_train (DataFrame): Training feature values.
             y_train (Series): Training target values (multilabel).
@@ -48,6 +49,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 Defaults to True.
             local_explainer (bool): Whether to use a local explainer.
                 Defaults to True.
+
         Raises:
             ValueError: If x_train or y_train is None, or if features are not provided
                         or not present in x_train.
@@ -77,6 +79,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
     def explain(self, **kwargs):
         """Explain the features for multilabel classification.
         This method interprets the features based on the training data and SHAP values.
+
         Args:
             **kwargs: Additional keyword arguments for customization, such as:
                 - figsize: Tuple for figure size (default: (15, 8))
@@ -158,6 +161,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
         """Interpret global features for multilabel classification.
         This method calculates and plots the global feature importance based on
         SHAP values.
+
         Args:
             **kwargs: Additional keyword arguments for customization, such as:
                 - figsize: Tuple for figure size (default: (15, 8))
@@ -217,6 +221,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
         """Interpret numerical features for multilabel classification.
         This method calculates and plots the relationship between numerical features,
         target values, and SHAP values.
+
         Args:
             **kwargs: Additional keyword arguments for customization, such as:
                 - figsize: Tuple for figure size (default: (15, 8))
@@ -267,6 +272,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
         """Interpret categorical features for multilabel classification.
         This method calculates and plots the relationship between categorical features,
         target values, and SHAP values.
+
         Args:
             **kwargs: Additional keyword arguments for customization, such as:
                 - figsize: Tuple for figure size (default: (15, 8))
