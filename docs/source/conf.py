@@ -1,0 +1,60 @@
+# Configuration file for the Sphinx documentation builder.
+
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../../'))
+
+# -- Project information -----------------------------------------------------
+project = 'MLExplainer'
+copyright = '2025, Zacharie Buisson'
+author = 'Zacharie Buisson'
+release = '0.1.4'
+
+# -- General configuration ---------------------------------------------------
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.intersphinx',
+    'sphinx_autodoc_typehints',
+]
+
+templates_path = ['_templates']
+exclude_patterns = []
+
+# -- Options for HTML output -------------------------------------------------
+html_theme = 'sphinx_rtd_theme'
+html_static_path = ['_static']
+
+# GitHub Pages configuration
+html_baseurl = 'https://zacharie-buisson1.github.io/mlexplainer/'
+html_extra_path = ['.nojekyll']
+
+# -- Extension configuration -------------------------------------------------
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': True,
+    'exclude-members': '__weakref__'
+}
+
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3/', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
+    'shap': ('https://shap.readthedocs.io/en/latest/', None),
+}
