@@ -245,13 +245,9 @@ class TestBinaryMLExplainerImports(TestCase):
         self.assertTrue(BaseMLExplainer)
 
     def test_import_multilabel_functions(self):
-        """Test that multilabel functions can be imported."""
-        from mlexplainer.explainers.shap import (
-            feature_interpretation_multimodal,
-            feature_interpretation_multimodal_category,
-        )
-        self.assertTrue(feature_interpretation_multimodal)
-        self.assertTrue(feature_interpretation_multimodal_category)
+        """Test that multilabel explainer can be imported."""
+        from mlexplainer.explainers.shap import MultilabelMLExplainer
+        self.assertTrue(MultilabelMLExplainer)
 
     def test_import_visualization_functions(self):
         """Test that visualization functions can be imported."""
