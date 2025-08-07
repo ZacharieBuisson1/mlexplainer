@@ -2,7 +2,7 @@ name: Build and Deploy Documentation
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main, dev, doc/*]
   pull_request:
     branches: [ main ]
 
@@ -65,7 +65,6 @@ jobs:
           path: docs/build/html
 
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
