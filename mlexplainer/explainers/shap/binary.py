@@ -44,6 +44,7 @@ class BinaryMLExplainer(BaseMLExplainer):
     ):
         """
         Initialize the BinaryMLExplainer with training data, features, and model.
+
         Args:
             x_train (DataFrame): Training feature values.
             y_train (Series): Training target values.
@@ -53,6 +54,7 @@ class BinaryMLExplainer(BaseMLExplainer):
                                         Defaults to True.
             local_explainer (bool): Whether to use a local explainer.
                                         Defaults to True.
+
         Raises:
             ValueError: If x_train or y_train is None, or if features are not provided
                         or not present in x_train.
@@ -83,6 +85,7 @@ class BinaryMLExplainer(BaseMLExplainer):
         This method interprets the features based on the training data and SHAP values.
         It visualizes global feature importance and interprets numerical
         and categorical features.
+
         Args:
             **kwargs: Additional keyword arguments for customization, such as:
                 - figsize: Tuple for figure size (default: (15, 8))
@@ -140,7 +143,14 @@ class BinaryMLExplainer(BaseMLExplainer):
         return results
 
     def _explain_global_features(self, **kwargs):
-        """Interpret global features for binary classification."""
+        """Interpret global features for binary classification.
+        This method visualizes the global feature importance based on the mean of
+        the absolute SHAP values for each feature.
+
+        Args:
+            **kwargs: Additional keyword arguments for customization, such as:
+                - figsize: Tuple for figure size (default: (15, 8))
+        """
         # calculate the absolute value for each features
         absolute_shap_values = DataFrame(
             self.shap_values_train, columns=self.features
@@ -188,6 +198,7 @@ class BinaryMLExplainer(BaseMLExplainer):
         """Interpret numerical features for binary classification.
         This method visualizes the relationship between numerical features and
         the target variable, and plots SHAP values for each numerical feature.
+
         Args:
             **kwargs: Additional keyword arguments for customization, such as:
                 - figsize: Tuple for figure size (default: (15, 8))
@@ -240,6 +251,7 @@ class BinaryMLExplainer(BaseMLExplainer):
         """Interpret categorical features for binary classification.
         This method visualizes the relationship between categorical features and
         the target variable, and plots SHAP values for each categorical feature.
+
         Args:
             **kwargs: Additional keyword arguments for customization, such as:
                 - figsize: Tuple for figure size (default: (15, 8))

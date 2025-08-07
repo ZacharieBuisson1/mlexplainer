@@ -215,6 +215,7 @@ def plot_shap_values_categorical_binary(
     for a binary classification task. It adjusts the y-axis limits to center around
     the mean of the target variable in the training set, and aligns the secondary
     y-axis (SHAP values) with the primary y-axis (mean target).
+
     Args:
         x_train (DataFrame): Training feature values.
         feature (str): The feature name to plot.
@@ -229,6 +230,7 @@ def plot_shap_values_categorical_binary(
         s (float, optional): Size of the points in the scatter plot. Defaults to 2.0.
         annotate (bool, optional): Whether to annotate the plot with text labels.
             Defaults to True.
+
     Returns:
         tuple: Matplotlib axes for the main plot and SHAP plot.
     """
@@ -287,6 +289,7 @@ def plot_shap_values_numerical_multilabel(
     for each modality in the multilabel target. It adjusts the y-axis limits to center
     around the mean of the target variable in the training set for each modality,
     and aligns the secondary y-axis (SHAP values) with the primary y-axis (mean target).
+
     Args:
         x_train (DataFrame): Training feature values.
         y_train (Series): Training target values (multilabel).
@@ -300,6 +303,7 @@ def plot_shap_values_numerical_multilabel(
         alpha (float, optional): Alpha transparency of the points. Defaults to 1.0.
         s (float, optional): Size of the points in the scatter plot. Defaults to 2.0.
         annotate (bool, optional): Whether to annotate the plot with text labels.
+
     Returns:
         ndarray: Array of Matplotlib axes with the scatter plots for each modality.
     """
@@ -364,6 +368,7 @@ def plot_shap_values_categorical_multilabel(
     for each modality in the multilabel target. It adjusts the y-axis limits to center
     around the mean of the target variable in the training set for each modality,
     and aligns the secondary y-axis (SHAP values) with the primary y-axis (mean target).
+
     Args:
         x_train (DataFrame): Training feature values.
         y_train (Series): Training target values (multilabel).
@@ -378,6 +383,7 @@ def plot_shap_values_categorical_multilabel(
         alpha (float, optional): Alpha transparency of the points. Defaults to 1.0.
         s (float, optional): Size of the points in the scatter plot. Defaults to 2.0.
         annotate (bool, optional): Whether to annotate the plot with text labels.
+
     Returns:
         ndarray: Array of Matplotlib axes with the scatter plots for each modality.
     """

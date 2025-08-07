@@ -205,6 +205,7 @@ def plot_feature_target_numerical_binary(
 ) -> Axes:
     """Plot the relationship between a feature and the target variable for binary
     classification.
+
     Args:
         dataframe (DataFrame): DataFrame containing the feature and target variable.
         target_serie (Series): Series representing the target variable.
@@ -214,6 +215,7 @@ def plot_feature_target_numerical_binary(
         delta (float): Delta value for adjusting plot limits.
         threshold_nb_values (float): Threshold for number of unique values to
         decide grouping method.
+
     Returns:
         Axes: Matplotlib axis with the feature-target plot.
     """
@@ -255,6 +257,7 @@ def plot_feature_target_categorical_binary(
         feature (str): The feature name to plot.
         ax (Axes): Matplotlib axis to plot on.
         color (tuple[float, float, float]): Color for the plot.
+
     Returns:
         Axes: Matplotlib axis with the feature-target plot.
     """
