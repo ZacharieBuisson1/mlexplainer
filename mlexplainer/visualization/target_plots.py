@@ -371,13 +371,10 @@ def plot_feature_target_categorical_multilabel(
         figsize (tuple, optional): Figure size for the plot. Defaults to (15, 8).
         dpi (int, optional): Dots per inch for the plot. Defaults to 200.
     """
-    # Prepare the plot
-    feature_train = dataframe[feature].copy()
-
     # Calculate subplot layout
     rows = (len(modalities) + 2) // 3  # 3 plots per row
     adjusted_figsize = (figsize[0], figsize[1] * rows / 2)
-    fig, axes = plt.subplots(
+    _, axes = plt.subplots(
         rows, 3, figsize=adjusted_figsize, dpi=dpi, sharex=True
     )
     axes = axes.flatten()
