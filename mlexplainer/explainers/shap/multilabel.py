@@ -6,7 +6,6 @@ including methods to explain numerical and categorical features using SHAP value
 from typing import Callable, List
 
 import matplotlib.pyplot as plt
-from numpy import ndarray, inf, arange, isclose, nan
 from pandas import DataFrame, Series
 
 from mlexplainer.core import BaseMLExplainer
@@ -21,7 +20,9 @@ from mlexplainer.utils.data_processing import (
     get_index_of_features,
     calculate_min_max_value,
 )
-from mlexplainer.utils.quantiles import group_values, is_in_quantile
+from mlexplainer.validation.feature_interpretation import (
+    validate_single_feature_interpretation,
+)
 
 
 class MultilabelMLExplainer(BaseMLExplainer):
@@ -43,6 +44,10 @@ class MultilabelMLExplainer(BaseMLExplainer):
             y_train (Series): Training target values (multilabel).
             features (List[str]): List of feature names to interpret.
             model (Callable): The machine learning model to explain.
+            global_explainer (bool): Whether to use a global explainer.
+                Defaults to True.
+            local_explainer (bool): Whether to use a local explainer.
+                Defaults to True.
         Raises:
             ValueError: If x_train or y_train is None, or if features are not provided
                         or not present in x_train.
@@ -77,6 +82,8 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 - figsize: Tuple for figure size (default: (15, 8))
                 - dpi: Dots per inch for the plot (default: 100)
                 - q: Number of quantiles for plotting (default: 20)
+                - threshold_nb_values: Threshold for number of values in categorical
+                  features (default: 15)
         """
 
         if self.global_explainer:
@@ -100,134 +107,61 @@ class MultilabelMLExplainer(BaseMLExplainer):
         and SHAP values for all features in the explainer for multilabel classification.
 
         Args:
-            q (int): Number of quantiles for continuous features. If None, uses adaptive quantiles.
+            q (int): Number of quantiles for continuous features.
+                If None, uses adaptive quantiles. Defaults to None.
 
         Returns:
-            dict: Dictionary with feature names as keys and modality-specific correctness results as values.
+            dict: Dictionary with feature names as keys and modality-specific
+                correctness results as values.
         """
-        results = {}
-        for feature in self.features:
-            results[feature] = self._validate_feature_interpretation(
-                feature, q
-            )
-        return results
-
-    def _validate_feature_interpretation(
-        self,
-        feature: str,
-        q=None,
-    ) -> dict:
-        """Validate the interpretation consistency for a single feature across all modalities.
-
-        Args:
-            feature (str): The feature name to validate.
-            q (int): Number of quantiles for continuous features. If None, uses adaptive quantiles.
-
-        Returns:
-            dict: Dictionary with modality names as keys and validation results as values.
-        """
-        if feature not in self.features:
-            raise ValueError(
-                f"Feature '{feature}' not found in features list."
-            )
-
         shap_values = self.shap_values_train
         if shap_values is None:
-            return {modality: False for modality in self.modalities}
+            return {
+                feature: {modality: False for modality in self.modalities}
+                for feature in self.features
+            }
 
-        # Get feature index for SHAP values
-        feature_index = get_index_of_features(self.x_train, feature)
         results = {}
+        for feature in self.features:
+            # Get feature index for SHAP values
+            feature_index = get_index_of_features(self.x_train, feature)
+            feature_results = {}
 
-        # Validate for each modality
-        for i, modality in enumerate(self.modalities):
-            # Create binary target for this modality
-            y_binary = (self.y_train == modality).astype(int)
-            ymean_binary = y_binary.mean()
+            # Validate for each modality
+            for i, modality in enumerate(self.modalities):
+                # Create binary target for this modality
+                y_binary = (self.y_train == modality).astype(int)
+                ymean_binary = y_binary.mean()
 
-            # Get SHAP values for this modality
-            if shap_values.ndim == 3:  # Multi-output SHAP values
-                feature_shap_values = shap_values[:, feature_index, i]
-            else:  # Single output - use as is
-                feature_shap_values = shap_values[:, feature_index]
+                # Get SHAP values for this modality
+                if shap_values.ndim == 3:  # Multi-output SHAP values
+                    feature_shap_values = shap_values[:, feature_index, i]
+                else:  # Single output - use as is
+                    feature_shap_values = shap_values[:, feature_index]
 
-            # Determine if feature is continuous or discrete
-            is_continuous = feature in self.numerical_features
-
-            if is_continuous:
-                # For continuous features, use quantile-based grouping
-                grouped_data, _ = group_values(
-                    self.x_train[feature], y_binary, q
+                feature_results[modality] = (
+                    validate_single_feature_interpretation(
+                        x_train=self.x_train,
+                        y_binary=y_binary,
+                        feature=feature,
+                        feature_shap_values=feature_shap_values,
+                        numerical_features=self.numerical_features,
+                        ymean_binary=ymean_binary,
+                        q=q,
+                    )
                 )
 
-                matches = []
-                quantiles_values = None
-                if not (q is None or self.x_train[feature].nunique() <= 15):
-                    quantiles = arange(
-                        1 / len(grouped_data), 1, 1 / len(grouped_data)
-                    )
-                    quantiles = [
-                        quant for quant in quantiles if not isclose(quant, 1)
-                    ]
-                    quantiles_values = list(
-                        self.x_train[feature].quantile(quantiles)
-                    ) + [inf]
-
-                for _, row in grouped_data.iterrows():
-                    group_val = row["group"]
-                    target_rate = row["target"]
-
-                    # Get observations for this group
-                    if group_val != group_val:  # NaN case
-                        group_mask = self.x_train[feature].isna()
-                    else:
-                        if q is None or self.x_train[feature].nunique() <= 15:
-                            group_mask = self.x_train[feature] == group_val
-                        else:
-                            group_mask = (
-                                self.x_train[feature].apply(
-                                    lambda val: is_in_quantile(
-                                        val, quantiles_values
-                                    )
-                                )
-                                == group_val
-                            )
-
-                    # Compare interpretations
-                    observed_interp = (
-                        "above" if target_rate > ymean_binary else "below"
-                    )
-                    shap_mean = feature_shap_values[group_mask].mean()
-                    shap_interp = "above" if shap_mean > 0 else "below"
-
-                    matches.append((group_val, observed_interp == shap_interp))
-
-                results[modality] = matches
-
-            else:
-                # For discrete/categorical features
-                feature_values = self.x_train[feature]
-                unique_values = feature_values.unique()
-                matches = []
-
-                for value in unique_values:
-                    mask = feature_values == value
-                    target_rate = y_binary[mask].mean()
-                    shap_mean = feature_shap_values[mask].mean()
-
-                    observed_interp = (
-                        "above" if target_rate > ymean_binary else "below"
-                    )
-                    shap_interp = "above" if shap_mean > 0 else "below"
-
-                    matches.append((value, observed_interp == shap_interp))
-
-                results[modality] = matches
-
+            results[feature] = feature_results
         return results
 
     def _explain_global_features(self, **kwargs):
-        """Interpret global features for multilabel classification."""
+        """Interpret global features for multilabel classification.
+        This method calculates and plots the global feature importance based on
+        SHAP values.
+        Args:
+            **kwargs: Additional keyword arguments for customization, such as:
+                - figsize: Tuple for figure size (default: (15, 8))
+        """
         # Calculate absolute SHAP values across all modalities
         if self.shap_values_train.ndim == 3:
             # For multi-output, sum across modalities
@@ -252,7 +186,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
         )
 
         figsize = kwargs.get("figsize", (15, 8))
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        _, ax = plt.subplots(1, 1, figsize=figsize)
 
         # Plot with horizontal bar chart
         ax.barh(
@@ -261,7 +195,10 @@ class MultilabelMLExplainer(BaseMLExplainer):
 
         # Set title and labels
         ax.set_title(
-            "Global Feature Importance for Multilabel Classification (Mean of the absolute SHAP values)"
+            (
+                "Global Feature Importance for Multilabel Classification",
+                " (Mean of the absolute SHAP values)",
+            )
         )
         ax.set_xlabel("Relative Importance (%)")
         ax.set_ylabel("Features")
@@ -277,7 +214,16 @@ class MultilabelMLExplainer(BaseMLExplainer):
         plt.show()
 
     def _explain_numerical(self, **kwargs):
-        """Interpret numerical features for multilabel classification."""
+        """Interpret numerical features for multilabel classification.
+        This method calculates and plots the relationship between numerical features,
+        target values, and SHAP values.
+        Args:
+            **kwargs: Additional keyword arguments for customization, such as:
+                - figsize: Tuple for figure size (default: (15, 8))
+                - dpi: Dots per inch for the plot (default: 100)
+                - q: Number of quantiles for plotting (default: 20)
+                - threshold_nb_values: Threshold for number of values in categorical
+                  features (default: 15)"""
         for feature in self.numerical_features:
 
             min_value_train, max_value_train = calculate_min_max_value(
@@ -318,7 +264,15 @@ class MultilabelMLExplainer(BaseMLExplainer):
             plt.close()
 
     def _explain_categorical(self, **kwargs):
-        """Interpret categorical features for multilabel classification."""
+        """Interpret categorical features for multilabel classification.
+        This method calculates and plots the relationship between categorical features,
+        target values, and SHAP values.
+        Args:
+            **kwargs: Additional keyword arguments for customization, such as:
+                - figsize: Tuple for figure size (default: (15, 8))
+                - dpi: Dots per inch for the plot (default: 200)
+                - color: Color for the plot (default: (0.28, 0.18, 0.71))
+        """
         for feature in self.categorical_features:
             # Plot feature-target relationship with SHAP values
             figsize = kwargs.get("figsize", (15, 8))

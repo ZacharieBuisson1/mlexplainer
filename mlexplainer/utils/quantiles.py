@@ -1,16 +1,23 @@
+"""Utility functions for quantile calculations in ML Explainer."""
+
+from typing import Optional, Union
+
+
 from pandas import DataFrame, Series, isna, notna, qcut, merge
 from numpy import arange, inf, isclose, nan
 
 
-def is_in_quantile(value: int, quantile_values: list[int]) -> int:
+def is_in_quantile(
+    value: int, quantile_values: list[Union[int, float]]
+) -> Union[int, float]:
     """Return the quantile of a value, given a list of quantiles.
 
     Args:
         value (int): Search value.
-        quantile_values (list[int]): List of quantiles.
+        quantile_values (list[Union[int, float]]): List of quantiles.
 
     Returns:
-        int: Upper bound of the quantile.
+        Union[int, float]: Upper bound of the quantile.
     """
     if isna(value):
         return -1
@@ -23,12 +30,13 @@ def is_in_quantile(value: int, quantile_values: list[int]) -> int:
     return inf
 
 
-def nb_min_quantiles(x: DataFrame, q: int = None) -> int:
+def nb_min_quantiles(x: DataFrame, q: Optional[int] = None) -> int:
     """Calculate the number of quantiles to use for a feature.
 
     Args:
         x (DataFrame): DataFrame to calculate the number of quantiles for.
-        q (int, optional): Number of quantiles. Defaults to None.
+        q (int, optional): Number of quantiles.
+            Defaults to None.
 
     Returns:
         int: Final number of quantiles to use.
@@ -59,9 +67,12 @@ def nb_min_quantiles(x: DataFrame, q: int = None) -> int:
 
 
 def group_values(
-    x: Series, y: Series, q: int, threshold_nb_values: float = 15
+    x: Series, y: Series, q: Optional[int], threshold_nb_values: float = 15
 ) -> tuple[DataFrame, int]:
     """Create a new DataFrame of cut values.
+    This function groups the values of a feature into quantiles and computes
+    the mean of the target variable for each group. It also counts the number
+    of observations in each group.
 
     Args:
         x (Series): Feature values.
@@ -88,7 +99,7 @@ def group_values(
     else:
         q = nb_min_quantiles(x, q)
         quantiles = arange(1 / q, 1, 1 / q)
-        quantiles = [quant for quant in quantiles if not isclose(quant, 1)]
+        quantiles = quantiles[~isclose(quantiles, 1)].flatten()
         quantiles_values = list(df["value"].quantile(quantiles)) + [inf]
 
         df["group"] = df["value"].apply(

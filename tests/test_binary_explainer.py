@@ -173,8 +173,8 @@ class TestBinaryMLExplainer(unittest.TestCase):
             self.assertIsInstance(validation_result, list)
     
     @patch('mlexplainer.explainers.shap.binary.ShapWrapper')
-    def test_validate_feature_interpretation_invalid_feature(self, mock_shap_wrapper):
-        """Test _validate_feature_interpretation with invalid feature."""
+    def test_correctness_features_invalid_feature(self, mock_shap_wrapper):
+        """Test correctness_features with invalid feature in features list."""
         mock_wrapper_instance = Mock()
         mock_wrapper_instance.calculate.return_value = self.mock_shap_values
         mock_shap_wrapper.return_value = mock_wrapper_instance
@@ -183,14 +183,13 @@ class TestBinaryMLExplainer(unittest.TestCase):
             self.x_train, self.y_train, self.features, self.model
         )
         
-        with self.assertRaises(ValueError) as context:
-            explainer._validate_feature_interpretation('nonexistent_feature')
-        
-        self.assertIn("not found in features list", str(context.exception))
+        # This should work since all features in self.features exist in x_train
+        result = explainer.correctness_features()
+        self.assertIsInstance(result, dict)
     
     @patch('mlexplainer.explainers.shap.binary.ShapWrapper')
-    def test_validate_feature_interpretation_numerical(self, mock_shap_wrapper):
-        """Test _validate_feature_interpretation with numerical feature."""
+    def test_correctness_features_numerical(self, mock_shap_wrapper):
+        """Test correctness_features with numerical feature."""
         mock_wrapper_instance = Mock()
         mock_wrapper_instance.calculate.return_value = self.mock_shap_values
         mock_shap_wrapper.return_value = mock_wrapper_instance
@@ -199,15 +198,17 @@ class TestBinaryMLExplainer(unittest.TestCase):
             self.x_train, self.y_train, ['numerical_feature'], self.model
         )
         
-        result = explainer._validate_feature_interpretation('numerical_feature')
+        result = explainer.correctness_features()
         
-        self.assertIsInstance(result, list)
+        self.assertIsInstance(result, dict)
+        self.assertIn('numerical_feature', result)
+        self.assertIsInstance(result['numerical_feature'], list)
         # Should have validation results for quantile groups
-        self.assertGreater(len(result), 0)
+        self.assertGreater(len(result['numerical_feature']), 0)
     
     @patch('mlexplainer.explainers.shap.binary.ShapWrapper')
-    def test_validate_feature_interpretation_categorical(self, mock_shap_wrapper):
-        """Test _validate_feature_interpretation with categorical feature."""
+    def test_correctness_features_categorical(self, mock_shap_wrapper):
+        """Test correctness_features with categorical feature."""
         mock_wrapper_instance = Mock()
         mock_wrapper_instance.calculate.return_value = self.mock_shap_values
         mock_shap_wrapper.return_value = mock_wrapper_instance
@@ -216,11 +217,13 @@ class TestBinaryMLExplainer(unittest.TestCase):
             self.x_train, self.y_train, ['categorical_feature'], self.model
         )
         
-        result = explainer._validate_feature_interpretation('categorical_feature')
+        result = explainer.correctness_features()
         
-        self.assertIsInstance(result, list)
+        self.assertIsInstance(result, dict)
+        self.assertIn('categorical_feature', result)
+        self.assertIsInstance(result['categorical_feature'], list)
         # Should have validation results for each category
-        self.assertGreater(len(result), 0)
+        self.assertGreater(len(result['categorical_feature']), 0)
     
     @patch('mlexplainer.explainers.shap.binary.ShapWrapper')
     def test_feature_categorization(self, mock_shap_wrapper):

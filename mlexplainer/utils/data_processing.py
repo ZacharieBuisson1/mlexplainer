@@ -1,3 +1,5 @@
+"""Utility functions for data processing in ML Explainer."""
+
 from pandas import concat, DataFrame, Series, merge
 
 
@@ -30,20 +32,20 @@ def get_index(column_name: str, dataframe: DataFrame) -> int:
     return ind_index
 
 
-def get_index_of_features(X: DataFrame, feature: str) -> int:
+def get_index_of_features(dataframe: DataFrame, feature: str) -> int:
     """Get the index of a feature in the DataFrame columns.
 
     Args:
-        X (DataFrame): DataFrame containing the features.
+        dataframe (DataFrame): DataFrame containing the features.
         feature (str): The feature name to find the index of.
 
     Returns:
         int: Index of the feature in the DataFrame columns.
     """
     try:
-        return X.columns.tolist().index(feature)
+        return dataframe.columns.tolist().index(feature)
     except ValueError as exc:
-        raise ValueError("Feature is not in X.") from exc
+        raise ValueError("Feature is not in dataframe.") from exc
 
 
 def target_groupby_category(
