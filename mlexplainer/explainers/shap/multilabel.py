@@ -19,6 +19,7 @@ from mlexplainer.visualization import (
 )
 from mlexplainer.utils.data_processing import (
     get_index_of_features,
+    calculate_min_max_value,
 )
 from mlexplainer.utils.quantiles import group_values, is_in_quantile
 
@@ -313,7 +314,8 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 delta=delta,
             )
 
-        plt.show()
+            plt.show()
+            plt.close()
 
     def _explain_categorical(self, **kwargs):
         """Interpret categorical features for multilabel classification."""
@@ -341,17 +343,5 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 shap_values_train=self.shap_values_train,
             )
 
-
-def calculate_min_max_value(dataframe: DataFrame, feature: str):
-    """
-    Calculate the minimum and maximum values of a feature in a DataFrame.
-    Args:
-        dataframe (DataFrame): The DataFrame containing the feature.
-        feature (str): The name of the feature to calculate min and max values.
-    Returns:
-        tuple: A tuple containing the minimum and maximum values of the feature.
-    """
-    if dataframe[feature].dtype == "category":
-        return 0, dataframe[feature].value_counts().shape[0] - 1
-
-    return dataframe[feature].min(), dataframe[feature].max()
+            plt.show()
+            plt.close()

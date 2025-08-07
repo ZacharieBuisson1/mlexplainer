@@ -18,7 +18,10 @@ from mlexplainer.visualization import (
     plot_shap_values_numerical_binary,
 )
 from mlexplainer.utils.quantiles import group_values, is_in_quantile
-from mlexplainer.utils.data_processing import get_index_of_features
+from mlexplainer.utils.data_processing import (
+    get_index_of_features,
+    calculate_min_max_value,
+)
 
 
 class BinaryMLExplainer(BaseMLExplainer):
@@ -174,7 +177,13 @@ class BinaryMLExplainer(BaseMLExplainer):
 
                 # Determine observed interpretation (above/below global mean)
                 observed_interpretation[group_val] = (
-                    "above" if target_rate > self.ymean_train else "below"
+                    "above"
+                    if target_rate > self.ymean_train
+                    else (
+                        "below"
+                        if target_rate < self.ymean_train
+                        else "neutral"
+                    )
                 )
 
                 # Get SHAP values for this group
@@ -195,9 +204,14 @@ class BinaryMLExplainer(BaseMLExplainer):
                         )
 
                 # Calculate mean SHAP value for this group
-                group_shap_mean = feature_shap_values[group_mask].mean()
+                if feature_shap_values[group_mask].shape[0] == 0:
+                    group_shap_mean = 0
+                else:
+                    group_shap_mean = feature_shap_values[group_mask].mean()
                 shap_interpretation[group_val] = (
-                    "above" if group_shap_mean > 0 else "below"
+                    "above"
+                    if group_shap_mean > 0
+                    else "below" if group_shap_mean < 0 else "neutral"
                 )
 
             # Now create interval mapping for all processed groups
@@ -245,13 +259,21 @@ class BinaryMLExplainer(BaseMLExplainer):
                 mask = feature_values == value
                 target_rate = self.y_train[mask].mean()
                 observed_interpretation[value] = (
-                    "above" if target_rate > self.ymean_train else "below"
+                    "above"
+                    if target_rate > self.ymean_train
+                    else (
+                        "below"
+                        if target_rate < self.ymean_train
+                        else "neutral"
+                    )
                 )
 
                 # Calculate mean SHAP value for this category
                 shap_mean = feature_shap_values[mask].mean()
                 shap_interpretation[value] = (
-                    "above" if shap_mean > 0 else "below"
+                    "above"
+                    if shap_mean > 0
+                    else "below" if shap_mean < 0 else "neutral"
                 )
 
         # Compare interpretations and return results with intervals for continuous features
@@ -358,7 +380,8 @@ class BinaryMLExplainer(BaseMLExplainer):
                 ax=ax,
             )
 
-        plt.show()
+            plt.show()
+            plt.close()
 
     def _explain_categorical(self, **kwargs):
         """Interpret categorical features for binary classification."""
@@ -377,19 +400,5 @@ class BinaryMLExplainer(BaseMLExplainer):
                 self.x_train, feature, self.shap_values_train, ax
             )
 
-        plt.show()
-
-
-def calculate_min_max_value(dataframe: DataFrame, feature: str):
-    """
-    Calculate the minimum and maximum values of a feature in a DataFrame.
-    Args:
-        dataframe (DataFrame): The DataFrame containing the feature.
-        feature (str): The name of the feature to calculate min and max values.
-    Returns:
-        tuple: A tuple containing the minimum and maximum values of the feature.
-    """
-    if dataframe[feature].dtype == "category":
-        return 0, dataframe[feature].value_counts().shape[0] - 1
-
-    return dataframe[feature].min(), dataframe[feature].max()
+            plt.show()
+            plt.close()
