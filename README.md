@@ -1,6 +1,6 @@
 # MLExplainer
 
-Create a general ml explainer package, mainly focus on the shapley's values explainability
+Advanced Machine Learning package dedicated to model interpretability, with a primary focus on leveraging Shapley values for explaining complex predictive models.
 
 <p align="left">
     <img alt="PyPI" src="https://img.shields.io/pypi/v/mlexplainer">
