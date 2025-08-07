@@ -333,19 +333,15 @@ def plot_feature_target_numerical_multilabel(
         y_binary = Series((target_serie == modality).astype(int))
 
         # Plot feature-target relationship
-        ax, _ = plot_feature_numerical_target(
-            dataframe[feature],
+        ax = plot_feature_target_numerical_binary(
+            dataframe,
             y_binary,
+            feature,
             q,
             ax,
             delta,
-            y_binary.mean(),
             threshold_nb_values=threshold_nb_values,
         )
-
-        ax.set_xlabel(f"{feature} values", fontsize="large")
-        ax.set_title(f"Target Modality: {modality}", fontsize="large")
-        ax.set_ylabel("Taux de cible", fontsize="large")
 
     for j in range(i + 1, len(axes)):
         fig.delaxes(axes[j])
@@ -392,34 +388,13 @@ def plot_feature_target_categorical_multilabel(
 
         # Create binary target for this modality
         y_binary = (target_serie == modality).astype(int)
-        mean_target = y_binary.mean()
 
-        # First part - printing information for observed values
-        stats_to_plot = target_groupby_category(dataframe, feature, y_binary)
-        ax.plot(
-            stats_to_plot["group"],
-            stats_to_plot["mean_target"],
-            "o",
+        ax = plot_feature_target_categorical_binary(
+            dataframe,
+            y_binary,
+            feature,
+            ax,
             color=color,
         )
-        num_categories = feature_train.value_counts().shape[0]
-        ax.hlines(
-            mean_target,
-            -0.5,
-            num_categories - 0.5,
-            linestyle="--",
-            color=color,
-        )
-
-        # Determine the center points
-        y_center = mean_target
-        ax = set_centered_ylim(ax, y_center)
-
-        # Transform tick to percent
-        ax = reformat_y_axis(ax, color)
-
-        # set up a label for the feature
-        feature_label = feature
-        ax.set_xlabel(feature_label, fontsize="large")
 
     return axes

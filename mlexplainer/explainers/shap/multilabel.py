@@ -304,7 +304,6 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 threshold_nb_values=threshold_nb_values,
             )
 
-            modalities = self.y_train.unique()
             axes = plot_shap_values_numerical_multilabel(
                 x_train=self.x_train,
                 y_train=self.y_train,
@@ -324,7 +323,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
             dpi = kwargs.get("dpi", 200)
             color = kwargs.get("color", (0.28, 0.18, 0.71))
 
-            plot_feature_target_categorical_multilabel(
+            axes = plot_feature_target_categorical_multilabel(
                 self.x_train,
                 self.y_train,
                 feature,
@@ -332,6 +331,14 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 figsize,
                 dpi,
                 color,
+            )
+
+            axes = plot_shap_values_categorical_multilabel(
+                x_train=self.x_train,
+                y_train=self.y_train,
+                feature=feature,
+                axes=axes,
+                shap_values_train=self.shap_values_train,
             )
 
 

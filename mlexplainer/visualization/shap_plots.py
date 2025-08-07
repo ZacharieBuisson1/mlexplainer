@@ -291,8 +291,8 @@ def plot_shap_values_numerical_multilabel(
             s=s,
             annotate=annotate,
         )
-        print(ax2.get_yticklabels(), [type(t) for t in ax2.get_yticklabels()])
 
+        # Set the color of the y-ticks based on the SHAP values
         for tick in ax2.get_yticklabels():
             tick_text = tick.get_text().replace("−", "-")
             tick_value = float(tick_text)
@@ -311,6 +311,7 @@ def plot_shap_values_numerical_multilabel(
 
 def plot_shap_values_categorical_multilabel(
     x_train: DataFrame,
+    y_train: Series,
     feature: str,
     shap_values_train: ndarray,
     axes: Axes,
@@ -322,4 +323,38 @@ def plot_shap_values_categorical_multilabel(
     annotate: bool = True,
 ):
 
-    pass
+    modalities = y_train.unique()
+
+    for i, modality in enumerate(modalities):
+        ax = axes[i]
+
+        # Create a temporary binary target for the current modality
+        y_binary = (y_train == modality).astype(int)
+
+        ax, ax2 = plot_shap_values_categorical_binary(
+            x_train=x_train,
+            feature=feature,
+            shap_values_train=shap_values_train[:, :, i],
+            ax=ax,
+            color_positive=color_positive,
+            color_negative=color_negative,
+            marker=marker,
+            alpha=alpha,
+            s=s,
+            annotate=annotate,
+        )
+
+        for tick in ax2.get_yticklabels():
+            tick_text = tick.get_text().replace("−", "-")
+            tick_value = float(tick_text)
+            if tick_value == 0:
+                color = "black"
+            elif tick_value > 0:
+                color = mcolors.to_hex(color_positive)
+            else:
+                color = mcolors.to_hex(color_negative)
+            tick.set_color(color)
+
+        axes[i] = ax2
+
+    return axes
