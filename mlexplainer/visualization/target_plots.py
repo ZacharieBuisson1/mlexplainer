@@ -10,9 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 from matplotlib.axes import Axes
 
-
-from mlexplainer.utils.quantiles import group_values
-from mlexplainer.utils.data_processing import target_groupby_category
+from mlexplainer.utils import group_values, target_groupby_category
 
 
 def creneau(x: DataFrame, xmin: float, xmax: float) -> DataFrame:
@@ -205,13 +203,17 @@ def plot_feature_target_numerical_binary(
     delta: float,
     threshold_nb_values: float = 15,
 ) -> Axes:
-    """Plot the relationship between a feature and the target variable for binary classification.
+    """Plot the relationship between a feature and the target variable for binary
+    classification.
     Args:
         dataframe (DataFrame): DataFrame containing the feature and target variable.
-        target_serie (Series): Series representing the target variable.        feature (str): The feature name to plot.
+        target_serie (Series): Series representing the target variable.
+        feature (str): The feature name to plot.
         q (int): Number of quantiles.
         ax (Axes): Matplotlib axis to plot on.
         delta (float): Delta value for adjusting plot limits.
+        threshold_nb_values (float): Threshold for number of unique values to
+        decide grouping method.
     Returns:
         Axes: Matplotlib axis with the feature-target plot.
     """

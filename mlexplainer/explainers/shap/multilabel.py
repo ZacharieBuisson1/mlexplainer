@@ -45,6 +45,10 @@ class MultilabelMLExplainer(BaseMLExplainer):
             y_train (Series): Training target values (multilabel).
             features (List[str]): List of feature names to interpret.
             model (Callable): The machine learning model to explain.
+            global_explainer (bool): Whether to use a global explainer.
+                Defaults to True.
+            local_explainer (bool): Whether to use a local explainer.
+                Defaults to True.
         Raises:
             ValueError: If x_train or y_train is None, or if features are not provided
                         or not present in x_train.
@@ -79,6 +83,8 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 - figsize: Tuple for figure size (default: (15, 8))
                 - dpi: Dots per inch for the plot (default: 100)
                 - q: Number of quantiles for plotting (default: 20)
+                - threshold_nb_values: Threshold for number of values in categorical
+                  features (default: 15)
         """
 
         if self.global_explainer:
@@ -102,14 +108,19 @@ class MultilabelMLExplainer(BaseMLExplainer):
         and SHAP values for all features in the explainer for multilabel classification.
 
         Args:
-            q (int): Number of quantiles for continuous features. If None, uses adaptive quantiles.
+            q (int): Number of quantiles for continuous features.
+                If None, uses adaptive quantiles. Defaults to None.
 
         Returns:
-            dict: Dictionary with feature names as keys and modality-specific correctness results as values.
+            dict: Dictionary with feature names as keys and modality-specific
+                correctness results as values.
         """
         shap_values = self.shap_values_train
         if shap_values is None:
-            return {feature: {modality: False for modality in self.modalities} for feature in self.features}
+            return {
+                feature: {modality: False for modality in self.modalities}
+                for feature in self.features
+            }
 
         results = {}
         for feature in self.features:
@@ -129,22 +140,29 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 else:  # Single output - use as is
                     feature_shap_values = shap_values[:, feature_index]
 
-                feature_results[modality] = validate_single_feature_interpretation(
-                    x_train=self.x_train,
-                    y_binary=y_binary,
-                    feature=feature,
-                    feature_shap_values=feature_shap_values,
-                    numerical_features=self.numerical_features,
-                    ymean_binary=ymean_binary,
-                    q=q,
+                feature_results[modality] = (
+                    validate_single_feature_interpretation(
+                        x_train=self.x_train,
+                        y_binary=y_binary,
+                        feature=feature,
+                        feature_shap_values=feature_shap_values,
+                        numerical_features=self.numerical_features,
+                        ymean_binary=ymean_binary,
+                        q=q,
+                    )
                 )
 
             results[feature] = feature_results
         return results
 
-
     def _explain_global_features(self, **kwargs):
-        """Interpret global features for multilabel classification."""
+        """Interpret global features for multilabel classification.
+        This method calculates and plots the global feature importance based on
+        SHAP values.
+        Args:
+            **kwargs: Additional keyword arguments for customization, such as:
+                - figsize: Tuple for figure size (default: (15, 8))
+        """
         # Calculate absolute SHAP values across all modalities
         if self.shap_values_train.ndim == 3:
             # For multi-output, sum across modalities
@@ -194,7 +212,16 @@ class MultilabelMLExplainer(BaseMLExplainer):
         plt.show()
 
     def _explain_numerical(self, **kwargs):
-        """Interpret numerical features for multilabel classification."""
+        """Interpret numerical features for multilabel classification.
+        This method calculates and plots the relationship between numerical features,
+        target values, and SHAP values.
+        Args:
+            **kwargs: Additional keyword arguments for customization, such as:
+                - figsize: Tuple for figure size (default: (15, 8))
+                - dpi: Dots per inch for the plot (default: 100)
+                - q: Number of quantiles for plotting (default: 20)
+                - threshold_nb_values: Threshold for number of values in categorical
+                  features (default: 15)"""
         for feature in self.numerical_features:
 
             min_value_train, max_value_train = calculate_min_max_value(
@@ -235,7 +262,15 @@ class MultilabelMLExplainer(BaseMLExplainer):
             plt.close()
 
     def _explain_categorical(self, **kwargs):
-        """Interpret categorical features for multilabel classification."""
+        """Interpret categorical features for multilabel classification.
+        This method calculates and plots the relationship between categorical features,
+        target values, and SHAP values.
+        Args:
+            **kwargs: Additional keyword arguments for customization, such as:
+                - figsize: Tuple for figure size (default: (15, 8))
+                - dpi: Dots per inch for the plot (default: 200)
+                - color: Color for the plot (default: (0.28, 0.18, 0.71))
+        """
         for feature in self.categorical_features:
             # Plot feature-target relationship with SHAP values
             figsize = kwargs.get("figsize", (15, 8))

@@ -4,13 +4,12 @@ This module provides core validation functions to check interpretation consisten
 between actual target rates and SHAP values for different feature types.
 """
 
-from typing import List, Tuple, Union, Optional
+from typing import List, Optional, Union
 
-from numpy import inf, arange, isclose, nan
+from numpy import inf, arange, isclose
 from pandas import DataFrame, Series
 
 from mlexplainer.utils.quantiles import group_values, is_in_quantile
-from mlexplainer.utils.data_processing import get_index_of_features
 
 
 def validate_single_feature_interpretation(
@@ -21,7 +20,8 @@ def validate_single_feature_interpretation(
     numerical_features: List[str],
     ymean_binary: float,
     q: Optional[int] = None,
-) -> List[Tuple]:
+    threshold_nb_values: int = 15,
+) -> Union[list[tuple[str, str, bool]]]:
     """Validate interpretation consistency between actual target rates and SHAP values for a single feature.
 
     This function compares feature impact by analyzing:
@@ -36,7 +36,10 @@ def validate_single_feature_interpretation(
         feature_shap_values (Series): SHAP values for the specific feature.
         numerical_features (List[str]): List of numerical feature names.
         ymean_binary (float): Mean of the binary target values.
-        q (int): Number of quantiles for continuous features. If None, uses adaptive quantiles.
+        q (int): Number of quantiles for continuous features.
+            If None, uses adaptive quantiles. Defaults to None.
+        threshold_nb_values (int): Threshold for number of unique values to decide
+            grouping method. Defaults to 15.
 
     Returns:
         List[Tuple]: List of tuples with validation results for each group/category.
@@ -55,12 +58,18 @@ def validate_single_feature_interpretation(
         shap_interpretation = {}
 
         # First, process all groups to get interpretations
-        quantiles_values = None
-        if not (q is None or x_train[feature].nunique() <= 15):
+        quantiles_values: list[Union[int, float]] = []
+        if not (
+            q is None or x_train[feature].nunique() <= threshold_nb_values
+        ):
             # Prepare quantile boundaries for later use
             quantiles = arange(1 / len(grouped_data), 1, 1 / len(grouped_data))
-            quantiles = [quant for quant in quantiles if not isclose(quant, 1)]
-            quantiles_values = list(x_train[feature].quantile(quantiles)) + [inf]
+            quantiles = quantiles[
+                [not isclose(quant, 1) for quant in quantiles]
+            ].flatten()
+            quantiles_values = list(x_train[feature].quantile(quantiles)) + [
+                inf
+            ]
 
         for _, row in grouped_data.iterrows():
             group_val = row["group"]
@@ -78,7 +87,10 @@ def validate_single_feature_interpretation(
                 group_mask = x_train[feature].isna()
             else:
                 # Find which observations belong to this quantile group
-                if q is None or x_train[feature].nunique() <= 15:
+                if (
+                    q is None
+                    or x_train[feature].nunique() <= threshold_nb_values
+                ):
                     group_mask = x_train[feature] == group_val
                 else:
                     group_mask = (
@@ -101,9 +113,9 @@ def validate_single_feature_interpretation(
 
         # Now create interval mapping for all processed groups
         group_intervals = {}
-        if q is None or x_train[feature].nunique() <= 15:
+        if q is None or x_train[feature].nunique() <= threshold_nb_values:
             # For small number of unique values, each value is its own group
-            for key in observed_interpretation.keys():
+            for key in observed_interpretation:
                 if key != key:  # NaN case
                     group_intervals[key] = ("missing", "missing")
                 else:
@@ -111,7 +123,7 @@ def validate_single_feature_interpretation(
         else:
             # For quantile-based grouping, create interval boundaries
             sorted_groups = sorted(
-                [k for k in observed_interpretation.keys() if k == k]
+                [k for k in observed_interpretation if k == k]
             )  # Filter out NaN
             for i, group_val in enumerate(sorted_groups):
                 if i == 0:
@@ -127,26 +139,30 @@ def validate_single_feature_interpretation(
                 group_intervals[group_val] = (start_val, end_val)
 
             # Handle NaN groups
-            for key in observed_interpretation.keys():
+            for key in observed_interpretation:
                 if key != key:  # NaN case
-                    group_intervals[key] = (nan, nan)
+                    group_intervals[key] = ("missing", "missing")
 
         # Compare interpretations and return results with intervals for continuous features
         matches = []
-        for key in observed_interpretation.keys():
+        for key, obs_interp in observed_interpretation.items():
             start_val, end_val = group_intervals[key]
             if start_val == "missing" and end_val == "missing":
-                matches.append((
-                    "missing",
-                    "missing",
-                    observed_interpretation[key] == shap_interpretation[key],
-                ))
+                matches.append(
+                    (
+                        "missing",
+                        "missing",
+                        obs_interp == shap_interpretation[key],
+                    )
+                )
             else:
-                matches.append((
-                    round(float(start_val), 3),
-                    round(float(end_val), 3),
-                    observed_interpretation[key] == shap_interpretation[key],
-                ))
+                matches.append(
+                    (
+                        str(round(float(start_val), 3)),
+                        str(round(float(end_val), 3)),
+                        obs_interp == shap_interpretation[key],
+                    )
+                )
 
     else:
         # For discrete/categorical features, group by unique values
@@ -169,13 +185,15 @@ def validate_single_feature_interpretation(
             # Calculate mean SHAP value for this category
             shap_mean = feature_shap_values[mask].mean()
             shap_interpretation[value] = (
-                "above" if shap_mean > 0 else "below" if shap_mean < 0 else "neutral"
+                "above"
+                if shap_mean > 0
+                else "below" if shap_mean < 0 else "neutral"
             )
 
         # For discrete features, keep original format
         matches = [
             (key, observed_interpretation[key] == shap_interpretation[key])
-            for key in observed_interpretation.keys()
+            for key in observed_interpretation
         ]
 
     return matches

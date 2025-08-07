@@ -1,8 +1,12 @@
-from numpy import ndarray, where
+"""Module for plotting SHAP values in various formats.
+This module provides functions to visualize SHAP values for both numerical and categorical features,
+as well as for binary and multilabel classification tasks.
+"""
+
+from numpy import ndarray
 from pandas import DataFrame, Series
 from matplotlib.axes import Axes
 import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
 
 from mlexplainer.utils.data_processing import (
     get_index_of_features,
@@ -21,6 +25,8 @@ def plot_shap_scatter(
     annotate: bool = True,
 ) -> Axes:
     """Plot a scatter plot of SHAP values.
+    This function creates a scatter plot of SHAP values against feature values.
+    The points are colored based on whether the SHAP value is positive or negative.
 
     Args:
         feature_values (Series): Values of the feature to plot.
@@ -118,6 +124,10 @@ def plot_shap_values_numerical_binary(
 ) -> tuple[Axes, Axes]:
     """
     Plot SHAP values for a binary classification feature.
+    This function creates a scatter plot of SHAP values against feature values
+    for a binary classification task. It adjusts the y-axis limits to center around
+    the mean of the target variable in the training set, and aligns the secondary
+    y-axis (SHAP values) with the primary y-axis (mean target).
     Args:
         x_train (DataFrame): Training feature values.
         feature (str): The feature name to plot.
@@ -201,6 +211,10 @@ def plot_shap_values_categorical_binary(
     annotate: bool = True,
 ) -> tuple[Axes, Axes]:
     """Plot SHAP values for a categorical feature in a binary classification task.
+    This function creates a scatter plot of SHAP values against feature values
+    for a binary classification task. It adjusts the y-axis limits to center around
+    the mean of the target variable in the training set, and aligns the secondary
+    y-axis (SHAP values) with the primary y-axis (mean target).
     Args:
         x_train (DataFrame): Training feature values.
         feature (str): The feature name to plot.
@@ -259,14 +273,36 @@ def plot_shap_values_numerical_multilabel(
     feature: str,
     shap_values_train: ndarray,
     delta: float,
-    axes: Axes,
+    axes: ndarray,
     color_positive: tuple[float, float, float] = (1.0, 0.5, 0.34),
     color_negative: tuple[float, float, float] = (0.12, 0.53, 0.9),
     marker: str = "o",
     alpha: float = 1.0,
     s: float = 2.0,
     annotate: bool = True,
-):
+) -> ndarray:
+    """
+    Plot SHAP values for a numerical feature in a multilabel classification task.
+    This function creates a scatter plot of SHAP values against feature values
+    for each modality in the multilabel target. It adjusts the y-axis limits to center
+    around the mean of the target variable in the training set for each modality,
+    and aligns the secondary y-axis (SHAP values) with the primary y-axis (mean target).
+    Args:
+        x_train (DataFrame): Training feature values.
+        y_train (Series): Training target values (multilabel).
+        feature (str): The feature name to plot.
+        shap_values_train (ndarray): SHAP values for the training features.
+        delta (float): Delta value for adjusting plot limits.
+        axes (ndarray): Array of Matplotlib axes to plot on, one for each modality.
+        color_positive (tuple[float, float, float], optional): Color for positive SHAP values.
+        color_negative (tuple[float, float, float], optional): Color for negative SHAP values.
+        marker (str, optional): Marker style for the scatter plot. Defaults to "o".
+        alpha (float, optional): Alpha transparency of the points. Defaults to 1.0.
+        s (float, optional): Size of the points in the scatter plot. Defaults to 2.0.
+        annotate (bool, optional): Whether to annotate the plot with text labels.
+    Returns:
+        ndarray: Array of Matplotlib axes with the scatter plots for each modality.
+    """
 
     modalities = y_train.unique()
 
@@ -314,22 +350,42 @@ def plot_shap_values_categorical_multilabel(
     y_train: Series,
     feature: str,
     shap_values_train: ndarray,
-    axes: Axes,
+    axes: ndarray,
     color_positive: tuple[float, float, float] = (1.0, 0.5, 0.34),
     color_negative: tuple[float, float, float] = (0.12, 0.53, 0.9),
     marker: str = "o",
     alpha: float = 1.0,
     s: float = 2.0,
     annotate: bool = True,
-):
+) -> ndarray:
+    """
+    Plot SHAP values for a categorical feature in a multilabel classification task.
+    This function creates a scatter plot of SHAP values against feature values
+    for each modality in the multilabel target. It adjusts the y-axis limits to center
+    around the mean of the target variable in the training set for each modality,
+    and aligns the secondary y-axis (SHAP values) with the primary y-axis (mean target).
+    Args:
+        x_train (DataFrame): Training feature values.
+        y_train (Series): Training target values (multilabel).
+        feature (str): The feature name to plot.
+        shap_values_train (ndarray): SHAP values for the training features.
+        axes (ndarray): Array of Matplotlib axes to plot on, one for each modality.
+        color_positive (tuple[float, float, float], optional): Color for positive SHAP values.
+            Defaults to (1.0, 0.5, 0.34).
+        color_negative (tuple[float, float, float], optional): Color for negative SHAP values.
+            Defaults to (0.12, 0.53, 0.9).
+        marker (str, optional): Marker style for the scatter plot. Defaults to "o".
+        alpha (float, optional): Alpha transparency of the points. Defaults to 1.0.
+        s (float, optional): Size of the points in the scatter plot. Defaults to 2.0.
+        annotate (bool, optional): Whether to annotate the plot with text labels.
+    Returns:
+        ndarray: Array of Matplotlib axes with the scatter plots for each modality.
+    """
 
     modalities = y_train.unique()
 
-    for i, modality in enumerate(modalities):
+    for i, _ in enumerate(modalities):
         ax = axes[i]
-
-        # Create a temporary binary target for the current modality
-        y_binary = (y_train == modality).astype(int)
 
         ax, ax2 = plot_shap_values_categorical_binary(
             x_train=x_train,
