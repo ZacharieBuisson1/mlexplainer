@@ -1,12 +1,13 @@
 # MLExplainer
 
-Advanced Machine Learning package dedicated to model interpretability, with a primary focus on leveraging Shapley values for explaining complex predictive models.
-
 <p align="left">
     <img alt="PyPI" src="https://img.shields.io/pypi/v/mlexplainer">
     <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/mlexplainer">
     <img alt="License" src="https://img.shields.io/github/license/zachariebuisson1/mlexplainer">
 </p>
+
+Advanced Machine Learning package dedicated to model interpretability, with a primary focus on leveraging Shapley values for explaining complex predictive models.
+
 
 # ReadTheDocs
 
