@@ -1,8 +1,9 @@
 [tool.poetry]
 name = "mlexplainer"
 version = "0.1.4"
-description = "Advanced ML explanation library for data scientists using modern frameworks."
+description = "Advanced Machine Learning package dedicated to model interpretability, with a primary focus on leveraging Shapley values for explaining complex predictive models."
 authors = ["ZacharieBUISSON <zacharie.buisson@orange.fr>"]
+license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -39,4 +40,5 @@ build-backend = "poetry.core.masonry.api"
 package-dir = {"" = "mlexplainer"}
 
 [tool.poetry.urls]
+docs = "https://mlexplainer.readthedocs.io/en/latest/index.html"
 repository = "https://github.com/ZacharieBuisson1/mlexplainer"
