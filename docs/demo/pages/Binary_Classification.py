@@ -8,7 +8,9 @@ from pandas import read_csv
 import streamlit as st
 from xgboost import XGBClassifier
 
+sys.path.append("../../")
 sys.path.append("../../../")
+sys.path.append("../../../../")
 
 from mlexplainer.explainers.shap.binary import BinaryMLExplainer
 
