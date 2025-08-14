@@ -15,6 +15,7 @@ matplotlib = "^3.10.1"
 shap = "^0.47.1"
 pyarrow = "^19.0.1"
 seaborn = "^0.13.2"
+xgboost = "^3.0.4"
 
 
 [tool.poetry.group.codequality.dependencies]
