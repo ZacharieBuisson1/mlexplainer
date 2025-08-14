@@ -285,6 +285,10 @@ class MultilabelMLExplainer(BaseMLExplainer):
             dpi = kwargs.get("dpi", 200)
             color = kwargs.get("color", (0.28, 0.18, 0.71))
 
+            # little refactorization for missing values and interpretability
+            self.x_train[feature] = self.x_train[feature].astype(str)
+            self.x_train[feature].fillna("missing_value", inplace=True)
+
             axes = plot_feature_target_categorical_multilabel(
                 self.x_train,
                 self.y_train,

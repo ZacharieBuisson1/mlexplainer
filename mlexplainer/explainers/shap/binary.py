@@ -3,10 +3,11 @@ This module provides an implementation of the BaseMLExplainer for binary classif
 including methods to explain numerical and categorical features using SHAP values.
 """
 
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Union
 
 import matplotlib.pyplot as plt
 from pandas import DataFrame, Series
+from streamlit import pyplot
 
 from mlexplainer.core import BaseMLExplainer
 from mlexplainer.explainers.shap.wrapper import ShapWrapper
@@ -80,13 +81,16 @@ class BinaryMLExplainer(BaseMLExplainer):
         )
         self.ymean_train = self.y_train.mean()
 
-    def explain(self, **kwargs):
+    def explain(
+        self, features_to_explain: Union[list[str], None] = None, **kwargs
+    ):
         """Explain the features for binary classification.
         This method interprets the features based on the training data and SHAP values.
         It visualizes global feature importance and interprets numerical
         and categorical features.
 
         Args:
+            features_to_explain (Union[list[str], None]): List of feature names to explain.
             **kwargs: Additional keyword arguments for customization, such as:
                 - figsize: Tuple for figure size (default: (15, 8))
                 - dpi: Dots per inch for the plot (default: 100)
@@ -94,6 +98,8 @@ class BinaryMLExplainer(BaseMLExplainer):
                 - threshold_nb_values: Threshold for number of unique values
                         in numerical features (default: 15)
         """
+        if features_to_explain is None:
+            features_to_explain = self.features
 
         if self.global_explainer:
             # plot a global features importance
@@ -101,10 +107,10 @@ class BinaryMLExplainer(BaseMLExplainer):
 
         if self.local_explainer:
             # check if num features are corrects
-            self._explain_numerical(**kwargs)
+            self._explain_numerical(features_to_explain, **kwargs)
 
             # check if cat features are corrects
-            self._explain_categorical(**kwargs)
+            self._explain_categorical(features_to_explain, **kwargs)
 
     def correctness_features(
         self,
@@ -170,7 +176,7 @@ class BinaryMLExplainer(BaseMLExplainer):
         )
 
         figsize = kwargs.get("figsize", (15, 8))
-        _, ax = plt.subplots(1, 1, figsize=figsize)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
 
         # plot with horizontal bar chart
         ax.barh(
@@ -192,9 +198,13 @@ class BinaryMLExplainer(BaseMLExplainer):
                 va="center",
             )
 
+        demo_mode = kwargs.get("demo_mode", False)
+        if demo_mode:
+            pyplot(fig)
+
         plt.show()
 
-    def _explain_numerical(self, **kwargs):
+    def _explain_numerical(self, features_to_explain: list[str], **kwargs):
         """Interpret numerical features for binary classification.
         This method visualizes the relationship between numerical features and
         the target variable, and plots SHAP values for each numerical feature.
@@ -207,8 +217,13 @@ class BinaryMLExplainer(BaseMLExplainer):
                 - threshold_nb_values: Threshold for number of unique values
                         in numerical features (default: 15)
         """
+        numerical_features_to_explain = [
+            feature
+            for feature in features_to_explain
+            if feature in self.numerical_features
+        ]
         # calculate ymean in train
-        for feature in self.numerical_features:
+        for feature in numerical_features_to_explain:
             min_value_train, max_value_train = calculate_min_max_value(
                 self.x_train, feature
             )
@@ -219,7 +234,7 @@ class BinaryMLExplainer(BaseMLExplainer):
             # Set default values for figsize and dpi if not provided
             figsize = kwargs.get("figsize", (15, 8))
             dpi = kwargs.get("dpi", 100)
-            _, ax = plt.subplots(figsize=figsize, dpi=dpi)
+            fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
             # plot feature target
             q = kwargs.get("q", 20)
@@ -244,10 +259,14 @@ class BinaryMLExplainer(BaseMLExplainer):
                 ax=ax,
             )
 
+            demo_mode = kwargs.get("demo_mode", False)
+            if demo_mode:
+                pyplot(fig)
+
             plt.show()
             plt.close()
 
-    def _explain_categorical(self, **kwargs):
+    def _explain_categorical(self, features_to_explain: list[str], **kwargs):
         """Interpret categorical features for binary classification.
         This method visualizes the relationship between categorical features and
         the target variable, and plots SHAP values for each categorical feature.
@@ -258,13 +277,23 @@ class BinaryMLExplainer(BaseMLExplainer):
                 - dpi: Dots per inch for the plot (default: 100)
                 - color: Color for the plot (default: (0.28, 0.18, 0.71))
         """
-        for feature in self.categorical_features:
+        categorical_features_to_explain = [
+            feature
+            for feature in features_to_explain
+            if feature in self.categorical_features
+        ]
+        for feature in categorical_features_to_explain:
             # Set default values for figsize and dpi if not provided
             figsize = kwargs.get("figsize", (15, 8))
             dpi = kwargs.get("dpi", 100)
-            _, ax = plt.subplots(figsize=figsize, dpi=dpi)
+            fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
             color = kwargs.get("color", (0.28, 0.18, 0.71))
+
+            # little refactorization for missing values and interpretability
+            self.x_train[feature] = self.x_train[feature].astype(str)
+            self.x_train[feature].fillna("missing_value", inplace=True)
+
             ax = plot_feature_target_categorical_binary(
                 self.x_train, self.y_train, feature, ax, color
             )
@@ -272,6 +301,10 @@ class BinaryMLExplainer(BaseMLExplainer):
             ax, _ = plot_shap_values_categorical_binary(
                 self.x_train, feature, self.shap_values_train, ax
             )
+
+            demo_mode = kwargs.get("demo_mode", False)
+            if demo_mode:
+                pyplot(fig)
 
             plt.show()
             plt.close()
