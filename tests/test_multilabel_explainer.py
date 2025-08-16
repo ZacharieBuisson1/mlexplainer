@@ -97,9 +97,9 @@ class TestMultilabelMLExplainer(unittest.TestCase):
         mock_fig = Mock()
         mock_ax = Mock()
         mock_plt.subplots.return_value = (mock_fig, mock_ax)
-        mock_target_plot.return_value = mock_ax
+        mock_target_plot.return_value = (mock_fig, mock_ax)
         mock_shap_plot.return_value = mock_ax
-        mock_cat_target_plot.return_value = mock_ax
+        mock_cat_target_plot.return_value = (mock_fig, mock_ax)
         mock_cat_shap_plot.return_value = mock_ax
         
         explainer = MultilabelMLExplainer(
@@ -130,9 +130,9 @@ class TestMultilabelMLExplainer(unittest.TestCase):
         mock_fig = Mock()
         mock_ax = Mock()
         mock_plt.subplots.return_value = (mock_fig, mock_ax)
-        mock_target_plot.return_value = mock_ax
+        mock_target_plot.return_value = (mock_fig, mock_ax)
         mock_shap_plot.return_value = mock_ax
-        mock_num_target_plot.return_value = mock_ax
+        mock_num_target_plot.return_value = (mock_fig, mock_ax)
         mock_num_shap_plot.return_value = mock_ax
         
         explainer = MultilabelMLExplainer(

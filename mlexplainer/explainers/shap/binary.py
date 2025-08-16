@@ -292,7 +292,7 @@ class BinaryMLExplainer(BaseMLExplainer):
 
             # little refactorization for missing values and interpretability
             self.x_train[feature] = self.x_train[feature].astype(str)
-            self.x_train[feature].fillna("missing_value", inplace=True)
+            self.x_train[feature] = self.x_train[feature].fillna("missing_value")
 
             ax = plot_feature_target_categorical_binary(
                 self.x_train, self.y_train, feature, ax, color

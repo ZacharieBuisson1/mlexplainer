@@ -312,7 +312,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
 
             # little refactorization for missing values and interpretability
             self.x_train[feature] = self.x_train[feature].astype(str)
-            self.x_train[feature].fillna("missing_value", inplace=True)
+            self.x_train[feature] = self.x_train[feature].fillna("missing_value")
 
             fig, axes = plot_feature_target_categorical_multilabel(
                 self.x_train,
