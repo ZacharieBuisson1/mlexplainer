@@ -71,6 +71,13 @@ def load_dataset(dataset_name: str):
 
 def main():
     st.title("Binary Classification Demo")
+    st.info(
+        (
+            "This demo is still work in progress. If you find any issue, open in github "
+            "issue [here](https://github.com/ZacharieBuisson1/mlexplainer/issues) in the repo or send me an email : zacharie.buisson@orange.fr"
+        ),
+        icon="ℹ️",
+    )
     st.markdown(
         """
     This demo showcases the MLExplainer library for binary classification tasks.
@@ -173,7 +180,7 @@ def main():
         if "model" in st.session_state:
             st.markdown("---")
             st.header("3. Features Interpretation with Shapley's values.")
-            st.markdown("How to use the package ? :")
+            st.markdown("How to use the package ?")
 
             st.code(
                 (

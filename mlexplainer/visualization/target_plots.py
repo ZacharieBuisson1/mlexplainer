@@ -3,6 +3,8 @@ This module provides functions to visualize the relationship between features an
 including numerical and categorical features, as well as handling missing values.
 """
 
+from typing import Union
+
 from pandas import concat, DataFrame, Series
 from numpy import nan
 import matplotlib.pyplot as plt
@@ -202,6 +204,7 @@ def plot_feature_target_numerical_binary(
     ax: Axes,
     delta: float,
     threshold_nb_values: float = 15,
+    target_modality: Union[str, None] = None,
 ) -> Axes:
     """Plot the relationship between a feature and the target variable for binary
     classification.
@@ -235,7 +238,13 @@ def plot_feature_target_numerical_binary(
     if used_q is not None:
         feature_label = f"{feature_label}, q={used_q}"
 
-    ax.set_xlabel(feature_label, fontsize="large")
+    if target_modality is None:
+        ax.set_xlabel(feature_label, fontsize="large")
+    else:
+        ax.set_xlabel(
+            f"{feature_label}, binary target={target_modality} VS all.",
+            fontsize="large",
+        )
 
     return ax
 
@@ -246,6 +255,7 @@ def plot_feature_target_categorical_binary(
     feature: str,
     ax: Axes,
     color: tuple[float, float, float] = (0.28, 0.18, 0.71),
+    target_modality: Union[str, None] = None,
 ):
     """
     Plot the relationship between a categorical feature and the
@@ -291,7 +301,13 @@ def plot_feature_target_categorical_binary(
 
     # set up a label for the feature
     feature_label = feature
-    ax.set_xlabel(feature_label, fontsize="large")
+    if target_modality is not None:
+        ax.set_xlabel(
+            f"{feature_label}, binary target={target_modality} VS all.",
+            fontsize="large",
+        )
+    else:
+        ax.set_xlabel(feature_label, fontsize="large")
 
     return ax
 
@@ -305,7 +321,7 @@ def plot_feature_target_numerical_multilabel(
     figsize: tuple = (15, 8),
     dpi: int = 100,
     threshold_nb_values: float = 15,
-) -> None:
+):
     """Plot the relationship between a numerical feature and all target modalities with SHAP values.
 
     Args:
@@ -346,12 +362,13 @@ def plot_feature_target_numerical_multilabel(
             ax,
             delta,
             threshold_nb_values=threshold_nb_values,
+            target_modality=modality,
         )
 
     for j in range(i + 1, len(axes)):
         fig.delaxes(axes[j])
 
-    return axes
+    return fig, axes
 
 
 def plot_feature_target_categorical_multilabel(
@@ -362,7 +379,7 @@ def plot_feature_target_categorical_multilabel(
     figsize: tuple = (15, 8),
     dpi: int = 200,
     color: tuple[float, float, float] = (0.28, 0.18, 0.71),
-) -> None:
+):
     """Plot the relationship between a categorical feature and all target modalities with SHAP values.
 
     Args:
@@ -377,7 +394,7 @@ def plot_feature_target_categorical_multilabel(
     # Calculate subplot layout
     rows = (len(modalities) + 2) // 3  # 3 plots per row
     adjusted_figsize = (figsize[0], figsize[1] * rows / 2)
-    _, axes = plt.subplots(
+    fig, axes = plt.subplots(
         rows, 3, figsize=adjusted_figsize, dpi=dpi, sharex=True
     )
     axes = axes.flatten()
@@ -397,6 +414,7 @@ def plot_feature_target_categorical_multilabel(
             feature,
             ax,
             color=color,
+            target_modality=modality,
         )
 
-    return axes
+    return fig, axes

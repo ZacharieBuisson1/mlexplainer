@@ -9,7 +9,13 @@ def main():
     st.set_page_config(layout="wide")
 
     st.title("🏠 Welcome to MLExplainer")
-
+    st.info(
+        (
+            "This demo is still work in progress. If you find any issue, open in github "
+            "issue [here](https://github.com/ZacharieBuisson1/mlexplainer/issues) in the repo or send me an email : zacharie.buisson@orange.fr"
+        ),
+        icon="ℹ️",
+    )
     st.markdown(
         """
     ## About MLExplainer

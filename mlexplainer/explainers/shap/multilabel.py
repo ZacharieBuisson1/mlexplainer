@@ -3,10 +3,11 @@ This module provides an implementation of the BaseMLExplainer for multilabel cla
 including methods to explain numerical and categorical features using SHAP values.
 """
 
-from typing import Callable, List
+from typing import Callable, List, Union
 
 import matplotlib.pyplot as plt
 from pandas import DataFrame, Series
+from streamlit import pyplot
 
 from mlexplainer.core import BaseMLExplainer
 from mlexplainer.explainers.shap.wrapper import ShapWrapper
@@ -76,7 +77,9 @@ class MultilabelMLExplainer(BaseMLExplainer):
         self.modalities = self.y_train.unique()
         self.ymean_train = self.y_train.mean()
 
-    def explain(self, **kwargs):
+    def explain(
+        self, features_to_explain: Union[list[str], None] = None, **kwargs
+    ):
         """Explain the features for multilabel classification.
         This method interprets the features based on the training data and SHAP values.
 
@@ -88,6 +91,8 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 - threshold_nb_values: Threshold for number of values in categorical
                   features (default: 15)
         """
+        if features_to_explain is None:
+            features_to_explain = self.features
 
         if self.global_explainer:
             # plot a global features importance
@@ -95,10 +100,10 @@ class MultilabelMLExplainer(BaseMLExplainer):
 
         if self.local_explainer:
             # check if num features are corrects
-            self._explain_numerical(**kwargs)
+            self._explain_numerical(features_to_explain, **kwargs)
 
             # check if cat features are corrects
-            self._explain_categorical(**kwargs)
+            self._explain_categorical(features_to_explain, **kwargs)
 
     def correctness_features(
         self,
@@ -190,7 +195,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
         )
 
         figsize = kwargs.get("figsize", (15, 8))
-        _, ax = plt.subplots(1, 1, figsize=figsize)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
 
         # Plot with horizontal bar chart
         ax.barh(
@@ -215,9 +220,13 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 va="center",
             )
 
+        demo_mode = kwargs.get("demo_mode", False)
+        if demo_mode:
+            pyplot(fig)
+
         plt.show()
 
-    def _explain_numerical(self, **kwargs):
+    def _explain_numerical(self, features_to_explain: list[str], **kwargs):
         """Interpret numerical features for multilabel classification.
         This method calculates and plots the relationship between numerical features,
         target values, and SHAP values.
@@ -229,7 +238,13 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 - q: Number of quantiles for plotting (default: 20)
                 - threshold_nb_values: Threshold for number of values in categorical
                   features (default: 15)"""
-        for feature in self.numerical_features:
+        numerical_features_to_explain = [
+            feature
+            for feature in features_to_explain
+            if feature in self.numerical_features
+        ]
+
+        for feature in numerical_features_to_explain:
 
             min_value_train, max_value_train = calculate_min_max_value(
                 self.x_train, feature
@@ -245,7 +260,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
 
             q = kwargs.get("q", 20)
             threshold_nb_values = kwargs.get("threshold_nb_values", 15)
-            axes = plot_feature_target_numerical_multilabel(
+            fig, axes = plot_feature_target_numerical_multilabel(
                 self.x_train,
                 self.y_train,
                 feature,
@@ -265,10 +280,14 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 delta=delta,
             )
 
+            demo_mode = kwargs.get("demo_mode", False)
+            if demo_mode:
+                pyplot(fig)
+
             plt.show()
             plt.close()
 
-    def _explain_categorical(self, **kwargs):
+    def _explain_categorical(self, features_to_explain: list[str], **kwargs):
         """Interpret categorical features for multilabel classification.
         This method calculates and plots the relationship between categorical features,
         target values, and SHAP values.
@@ -279,7 +298,13 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 - dpi: Dots per inch for the plot (default: 200)
                 - color: Color for the plot (default: (0.28, 0.18, 0.71))
         """
-        for feature in self.categorical_features:
+        categorical_features_to_explain = [
+            feature
+            for feature in features_to_explain
+            if feature in self.categorical_features
+        ]
+
+        for feature in categorical_features_to_explain:
             # Plot feature-target relationship with SHAP values
             figsize = kwargs.get("figsize", (15, 8))
             dpi = kwargs.get("dpi", 200)
@@ -289,7 +314,7 @@ class MultilabelMLExplainer(BaseMLExplainer):
             self.x_train[feature] = self.x_train[feature].astype(str)
             self.x_train[feature].fillna("missing_value", inplace=True)
 
-            axes = plot_feature_target_categorical_multilabel(
+            fig, axes = plot_feature_target_categorical_multilabel(
                 self.x_train,
                 self.y_train,
                 feature,
@@ -306,6 +331,10 @@ class MultilabelMLExplainer(BaseMLExplainer):
                 axes=axes,
                 shap_values_train=self.shap_values_train,
             )
+
+            demo_mode = kwargs.get("demo_mode", False)
+            if demo_mode:
+                pyplot(fig)
 
             plt.show()
             plt.close()
