@@ -4,6 +4,9 @@ on:
   pull_request:
     types:
       - closed
+      - reopened
+      - edited
+      - synchronize
     branches:
       - main
 
