@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mlexplainer_demo"
-version = "0.1.4"
+version = "1.0.0"
 description = "Advanced Machine Learning package dedicated to model interpretability, with a primary focus on leveraging Shapley values for explaining complex predictive models."
 authors = ["ZacharieBUISSON <zacharie.buisson@orange.fr>"]
 license = "MIT"

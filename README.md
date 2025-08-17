@@ -12,6 +12,10 @@ Advanced Machine Learning package dedicated to model interpretability, with a pr
 
 Check out the package documentation on [ReadTheDocs](https://mlexplainer.readthedocs.io/en/latest/index.html)!
 
+# Demo
+
+Check out the demo on [Streamlit](https://mlexplainer.streamlit.app/)
+
 # Install
 
 **MLExplainer** can be installed from [PyPI](https://pypi.org/project/mlexplainer/):
@@ -35,3 +39,7 @@ Key Features :
 * **Rich Visualizations**: Integrated plotting for feature-target relationships and SHAP value distributions
 * **Validation Tools**: Built-in interpretation consistency validation
 * **Modern Architecture**: Clean, extensible design with proper abstractions
+
+# About
+
+If you encounter any issues with the code or have suggestions for improvement, feel free to open an issue or contact me.
