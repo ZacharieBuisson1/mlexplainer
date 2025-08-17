@@ -12,6 +12,10 @@ Advanced Machine Learning package dedicated to model interpretability, with a pr
 
 Check out the package documentation on [ReadTheDocs](https://mlexplainer.readthedocs.io/en/latest/index.html)!
 
+# Demo
+
+Check out the demo on [Streamlit](https://mlexplainer.streamlit.app/)
+
 # Install
 
 **MLExplainer** can be installed from [PyPI](https://pypi.org/project/mlexplainer/):
