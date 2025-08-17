@@ -268,6 +268,18 @@ def plot_shap_values_categorical_binary(
         annotate=annotate,
     )
 
+    # Set the color of the y-ticks based on the SHAP values
+    for tick in ax2.get_yticklabels():
+        tick_text = tick.get_text().replace("−", "-")
+        tick_value = float(tick_text)
+        if tick_value == 0:
+            color = "black"
+        elif tick_value > 0:
+            color = mcolors.to_hex(color_positive)
+        else:
+            color = mcolors.to_hex(color_negative)
+        tick.set_color(color)
+
     return ax, ax2
 
 
