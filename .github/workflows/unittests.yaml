@@ -38,6 +38,14 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction --no-root --all-extras 
 
+      - name : Execute code quality tools
+        run: |
+          poetry run pylint ./mlexplainer --fail-under=7.5 
+      
+      # - name : Execute mypy check
+      #   run: |
+      #     poetry run mypy ./mlexplainer
+      
       - name: Run tests
         run: |
           poetry run coverage run -m unittest discover ./tests -t .
@@ -46,7 +54,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
-        python-version: ['3.11', '3.12']
+        python-version: ['3.11', '3.12', '3.13']
 
     defaults:
       run:

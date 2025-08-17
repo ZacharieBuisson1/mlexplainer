@@ -3,14 +3,11 @@ from unittest import main, TestCase
 from numpy import array, inf, nan
 from pandas import DataFrame, Series
 
-from mlexplainer.shap_explainer.utils_shap_explainer.utils import (
-    get_index,
+from mlexplainer.utils.data_processing import get_index
+from mlexplainer.utils.quantiles import (
     group_values,
     is_in_quantile,
     nb_min_quantiles,
-)
-from mlexplainer.shap_explainer.binary_classification.validate_interpretation import (
-    is_interpretation_consistent,
 )
 
 
@@ -231,101 +228,35 @@ class TestGroupValues(TestCase):
         self.assertEqual(used_q, 1)
 
 
-class TestIsInterpretationConsistent(TestCase):
-    def setUp(self):
-        # Create a mock dataset for testing
-        self.x_train = DataFrame(
-            {
-                "feature1": ["A", "B", "A", "C", "B", "A", "C", "B", "A", "C"],
-                "feature2": [1, 2, 1, 3, 2, 1, 3, 2, 1, 3],
-            }
-        )
-        self.y_train = Series([1, 0, 1, 0, 0, 1, 0, 0, 1, 0])
-        self.shap_values = array(
-            [
-                [0.1, -0.2],
-                [-0.1, 0.3],
-                [0.2, -0.1],
-                [-0.3, 0.4],
-                [0.1, -0.2],
-                [0.2, -0.1],
-                [-0.4, 0.5],
-                [0.1, -0.2],
-                [0.3, -0.1],
-                [-0.2, 0.3],
-            ]
-        )
+class TestBinaryMLExplainerImports(TestCase):
+    def test_import_binary_explainer(self):
+        """Test that BinaryMLExplainer can be imported from the main package."""
+        from mlexplainer import BinaryMLExplainer
+        self.assertTrue(BinaryMLExplainer)
 
-    def test_consistent_interpretation(self):
-        """Test when the interpretation is consistent."""
-        result = is_interpretation_consistent(
-            x_train=self.x_train,
-            y_train=self.y_train,
-            feature="feature1",
-            shap_values=self.shap_values,
-            ymean_train=None,
-            threshold_validation=0.5,
-            max_categories=10,
-        )
-        self.assertTrue(result)
+    def test_import_shap_wrapper(self):
+        """Test that ShapWrapper can be imported from the main package."""
+        from mlexplainer import ShapWrapper  
+        self.assertTrue(ShapWrapper)
 
-    def test_inconsistent_interpretation(self):
-        """Test when the interpretation is inconsistent."""
-        shap_values_inconsistent = self.shap_values.copy()
-        shap_values_inconsistent[:, 0] = -shap_values_inconsistent[
-            :, 0
-        ]  # Flip SHAP values
-        result = is_interpretation_consistent(
-            x_train=self.x_train,
-            y_train=self.y_train,
-            feature="feature1",
-            shap_values=shap_values_inconsistent,
-            ymean_train=None,
-            threshold_validation=0.5,
-            max_categories=10,
-        )
-        self.assertFalse(result)
+    def test_import_base_explainer(self):
+        """Test that BaseMLExplainer can be imported from the main package."""
+        from mlexplainer import BaseMLExplainer
+        self.assertTrue(BaseMLExplainer)
 
-    def test_no_shap_values(self):
-        """Test when SHAP values are not provided."""
-        result = is_interpretation_consistent(
-            x_train=self.x_train,
-            y_train=self.y_train,
-            feature="feature1",
-            shap_values=None,
-            ymean_train=None,
-            threshold_validation=0.5,
-            max_categories=10,
-        )
-        self.assertFalse(result)
+    def test_import_multilabel_functions(self):
+        """Test that multilabel explainer can be imported."""
+        from mlexplainer.explainers.shap import MultilabelMLExplainer
+        self.assertTrue(MultilabelMLExplainer)
 
-    def test_no_observed_interpretation(self):
-        """Test when the feature has too many categories."""
-        result = is_interpretation_consistent(
-            x_train=self.x_train,
-            y_train=self.y_train,
-            feature="feature2",  # Numerical feature with more unique values
-            shap_values=self.shap_values,
-            ymean_train=None,
-            threshold_validation=0.5,
-            max_categories=2,  # Set max_categories to a low value
+    def test_import_visualization_functions(self):
+        """Test that visualization functions can be imported."""
+        from mlexplainer.visualization import (
+            plot_shap_values_numerical_binary,
+            plot_feature_target_categorical_binary,
         )
-        self.assertFalse(result)
-
-    def test_missing_values_in_feature(self):
-        """Test when the feature contains missing values."""
-        x_train_with_nan = self.x_train.copy()
-        x_train_with_nan.loc[0, "feature1"] = None  # Add a missing value
-        result = is_interpretation_consistent(
-            x_train=x_train_with_nan,
-            y_train=self.y_train,
-            feature="feature1",
-            shap_values=self.shap_values,
-            ymean_train=None,
-            threshold_validation=0.5,
-            max_categories=10,
-        )
-        self.assertTrue(result)
+        self.assertTrue(plot_shap_values_numerical_binary)
+        self.assertTrue(plot_feature_target_categorical_binary)
 
 
 if __name__ == "__main__":

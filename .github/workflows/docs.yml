@@ -1,0 +1,22 @@
+name: ReadTheDocs Build
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build ReadTheDocs Latest
+        run: |
+          curl -X POST\
+           -H "Authorization: Token ${{ secrets.READTHEDOCS_API_TOKEN }}" https://readthedocs.org/api/v3/projects/mlexplainer/versions/latest/builds/
