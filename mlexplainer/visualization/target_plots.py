@@ -26,7 +26,7 @@ def creneau(x: DataFrame, xmin: float, xmax: float) -> DataFrame:
     Returns:
         pandas.DataFrame: Transformed DataFrame with square wave pattern.
     """
-    # Travailler sur des copies explicites pour éviter les warnings
+    # Work on explicit copies to avoid warnings
     x_a = x.copy()
     x_b = x.copy()
 
@@ -117,7 +117,7 @@ def reformat_y_axis(
     ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
 
     # Change the label
-    ax.set_ylabel("Taux de cible", fontsize="large", color=color)
+    ax.set_ylabel("Target Rate", fontsize="large", color=color)
 
     # Change size of ticks
     ax.tick_params(axis="y", labelsize="large")

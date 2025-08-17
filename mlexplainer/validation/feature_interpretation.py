@@ -4,7 +4,7 @@ This module provides core validation functions to check interpretation consisten
 between actual target rates and SHAP values for different feature types.
 """
 
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from numpy import inf, arange, isclose
 from pandas import DataFrame, Series
@@ -21,7 +21,7 @@ def validate_single_feature_interpretation(
     ymean_binary: float,
     q: Optional[int] = None,
     threshold_nb_values: int = 15,
-) -> Union[list[tuple[str, str, bool]]]:
+) -> List[Union[Tuple[str, str, bool], Tuple[Any, bool]]]:
     """Validate interpretation consistency between actual target rates and SHAP
     values for a single feature.
 
