@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath("../../"))
 project = "MLExplainer"
 copyright = "2025, Zacharie Buisson"
 author = "Zacharie Buisson"
-release = "1.0.0"
+release = "1.0.1"
 
 # -- General configuration ---------------------------------------------------
 extensions = [
