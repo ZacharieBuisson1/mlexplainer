@@ -197,6 +197,11 @@ def plot_shap_values_numerical_binary(
         max_shap_offset,
     )
 
+    # Set the color of the y-ticks based on the SHAP values
+    colorize_yticklabel_shap(
+        ax2, color_positive=color_positive, color_negative=color_negative
+    )
+
     return ax, ax2
 
 
@@ -268,6 +273,11 @@ def plot_shap_values_categorical_binary(
         annotate=annotate,
     )
 
+    # Set the color of the y-ticks based on the SHAP values
+    colorize_yticklabel_shap(
+        ax2, color_positive=color_positive, color_negative=color_negative
+    )
+
     return ax, ax2
 
 
@@ -335,16 +345,9 @@ def plot_shap_values_numerical_multilabel(
         )
 
         # Set the color of the y-ticks based on the SHAP values
-        for tick in ax2.get_yticklabels():
-            tick_text = tick.get_text().replace("−", "-")
-            tick_value = float(tick_text)
-            if tick_value == 0:
-                color = "black"
-            elif tick_value > 0:
-                color = mcolors.to_hex(color_positive)
-            else:
-                color = mcolors.to_hex(color_negative)
-            tick.set_color(color)
+        colorize_yticklabel_shap(
+            ax2, color_positive=color_positive, color_negative=color_negative
+        )
 
         axes[i] = ax2
 
@@ -408,17 +411,41 @@ def plot_shap_values_categorical_multilabel(
             annotate=annotate,
         )
 
-        for tick in ax2.get_yticklabels():
-            tick_text = tick.get_text().replace("−", "-")
-            tick_value = float(tick_text)
-            if tick_value == 0:
-                color = "black"
-            elif tick_value > 0:
-                color = mcolors.to_hex(color_positive)
-            else:
-                color = mcolors.to_hex(color_negative)
-            tick.set_color(color)
+        colorize_yticklabel_shap(
+            ax2, color_positive=color_positive, color_negative=color_negative
+        )
 
         axes[i] = ax2
 
     return axes
+
+
+def colorize_yticklabel_shap(
+    ax: Axes,
+    color_positive: tuple[float, float, float] = (1.0, 0.5, 0.34),
+    color_negative: tuple[float, float, float] = (0.12, 0.53, 0.9),
+) -> Axes:
+    """Colorize the y-tick labels of a SHAP plot based on their values.
+
+    Args:
+        ax (Axes): Matplotlib axis to modify.
+        color_positive (tuple[float, float, float], optional): Color for positive SHAP values.
+            Defaults to (1.0, 0.5, 0.34).
+        color_negative (tuple[float, float, float], optional): Color for negative SHAP values.
+            Defaults to (0.12, 0.53, 0.9).
+
+    Returns:
+        Axes: Matplotlib axis with colored y-tick labels.
+    """
+    for tick in ax.get_yticklabels():
+        tick_text = tick.get_text().replace("−", "-")
+        tick_value = float(tick_text)
+        if tick_value == 0:
+            color = "black"
+        elif tick_value > 0:
+            color = mcolors.to_hex(color_positive)
+        else:
+            color = mcolors.to_hex(color_negative)
+        tick.set_color(color)
+
+    return ax
