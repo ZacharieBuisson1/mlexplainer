@@ -59,7 +59,7 @@ def plot_shap_scatter(
         ax.text(
             x=1.05,
             y=0.8,
-            s="Impact à la hausse",
+            s="Positive Impact",
             fontsize="large",
             rotation=90,
             ha="left",
@@ -70,7 +70,7 @@ def plot_shap_scatter(
         ax.text(
             x=1.05,
             y=0.2,
-            s="Impact à la baisse",
+            s="Negative Impact",
             fontsize="large",
             rotation=90,
             ha="left",
@@ -81,7 +81,7 @@ def plot_shap_scatter(
         ax.text(
             x=1.1,
             y=0.5,
-            s="Valeurs de Shapley",
+            s="Shapley Values",
             fontsize="large",
             rotation=90,
             ha="left",
