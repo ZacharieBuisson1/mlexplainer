@@ -145,7 +145,9 @@ Remember: Your role is to orchestrate, not implement. You ensure the right speci
 
 - **SHAP Integration**: Built-in support for SHAP explainers with optimized workflows using TreeExplainer
 - **Multiple Classification Types**: Full support for binary and multilabel classification tasks
+- **Inference Mode**: Predictors for single-observation inference with SHAP contributions (NEW in v1.1+)
 - **Automatic Feature Detection**: Intelligent categorization of numerical, categorical, and string features
+- **Raw Data Support**: Handles JSON, untyped CSV, and supports scikit-learn pipelines for preprocessing
 - **Rich Visualizations**: Integrated plotting capabilities for feature-target relationships and SHAP value distributions
 - **Validation Tools**: Built-in interpretation consistency validation via `correctness_features()` method
 - **Modern Architecture**: Clean, extensible design with proper abstractions and design patterns
@@ -251,16 +253,21 @@ mlexplainer/
 │   ├── __init__.py
 │   ├── core/                 # Core abstractions
 │   │   ├── __init__.py
-│   │   └── base_explainer.py
-│   ├── explainers/           # Explainer implementations
+│   │   ├── base_explainer.py  # Base class for explainers
+│   │   └── base_predictor.py  # Base class for predictors (NEW)
+│   ├── explainers/           # Explainer implementations (global analysis)
 │   │   ├── __init__.py
 │   │   ├── lime/             # LIME explainers (placeholder)
 │   │   │   └── __init__.py
 │   │   └── shap/             # SHAP explainers
 │   │       ├── __init__.py
 │   │       ├── wrapper.py    # SHAP TreeExplainer wrapper
-│   │       ├── binary.py     # Binary classification
-│   │       └── multilabel.py # Multilabel classification
+│   │       ├── binary.py     # Binary classification explainer
+│   │       └── multilabel.py # Multilabel classification explainer
+│   ├── predictors/           # Predictor implementations (single-obs inference) (NEW)
+│   │   ├── __init__.py
+│   │   ├── binary_predictor.py    # Binary classification predictor
+│   │   └── multilabel_predictor.py # Multilabel classification predictor
 │   ├── utils/                # Utility functions
 │   │   ├── __init__.py
 │   │   ├── data_processing.py
@@ -275,9 +282,11 @@ mlexplainer/
 ├── tests/                    # Test suite
 │   ├── __init__.py
 │   ├── test_binary_explainer.py
+│   ├── test_binary_predictor.py  # Tests for binary predictor (NEW)
 │   ├── test_core.py
 │   ├── test_imports.py
 │   ├── test_multilabel_explainer.py
+│   ├── test_multilabel_predictor.py  # Tests for multilabel predictor (NEW)
 │   ├── test_shap_explainer.py
 │   ├── test_shap_wrapper.py
 │   ├── test_suite.py
@@ -301,17 +310,29 @@ mlexplainer/
 ### Base Classes
 
 - **`mlexplainer.core.base_explainer.BaseMLExplainer`**
-  - Abstract base class for all explainers
+  - Abstract base class for all explainers (global model interpretation)
   - Implements the Template Method pattern
   - Defines the core workflow: initialization → feature processing → explanation generation
   - Provides abstract methods for subclasses to implement specific behavior
   - Handles automatic feature type detection (numerical, categorical, string)
+  - Used for dataset-level analysis and visualization
+
+- **`mlexplainer.core.base_predictor.BaseMLPredictor`** (NEW)
+  - Abstract base class for all predictors (single-observation inference)
+  - Auto-detects feature names from model (XGBoost, LightGBM, CatBoost, scikit-learn)
+  - Auto-detects categorical features from model metadata
+  - Supports raw data input (JSON, dict, untyped DataFrame)
+  - Handles preprocessing via optional scikit-learn Pipeline
+  - Converts categorical features to proper dtype automatically
+  - Used for production inference with SHAP explanations
 
 - **`mlexplainer.explainers.shap.wrapper.ShapWrapper`**
   - Wrapper for SHAP value calculations using `shap.TreeExplainer`
   - Optimized for tree-based models (XGBoost, LightGBM, etc.)
   - Handles SHAP value computation and caching
   - Provides interface for accessing SHAP values across features
+  - `calculate()`: Batch SHAP calculation for datasets
+  - `calculate_single()`: Single-observation SHAP calculation (NEW)
 
 ### Explainer Implementations
 
@@ -329,6 +350,30 @@ mlexplainer/
   - Supports label-specific feature importance analysis
   - Provides cross-label feature comparison capabilities
 
+### Predictor Implementations (NEW)
+
+- **`mlexplainer.predictors.binary_predictor.BinaryMLPredictor`**
+  - Extends `BaseMLPredictor` for binary classification inference
+  - Predicts probability for positive class
+  - Calculates SHAP contributions for each feature
+  - Returns structured dict with:
+    - `prediction`: Predicted probability (0-1)
+    - `base_value`: Expected value (baseline probability)
+    - `contributions`: Feature-level SHAP contributions
+    - `contributions_pct`: Relative contributions as percentages
+    - `contributions_cumsum`: Cumulative contribution verification
+  - Supports XGBoost, Random Forest, Gradient Boosting, and other tree-based models
+  - Usage: `BinaryMLPredictor(model, x_train, pipeline=None)`
+
+- **`mlexplainer.predictors.multilabel_predictor.MultilabelMLPredictor`**
+  - Extends `BaseMLPredictor` for multilabel/multiclass inference
+  - Predicts probabilities for multiple labels simultaneously
+  - Calculates SHAP contributions per label
+  - Returns nested dict: `{label_name: {prediction, contributions, ...}}`
+  - Supports custom label names or auto-generates (label_0, label_1, ...)
+  - Handles both multiclass (mutually exclusive) and multilabel (independent) tasks
+  - Usage: `MultilabelMLPredictor(model, x_train, label_names=['A', 'B'], pipeline=None)`
+
 ### Key Modules
 
 #### Core Module (`mlexplainer/core/`)
@@ -340,6 +385,16 @@ mlexplainer/
 - **SHAP submodule**: Primary focus, contains SHAP-based explainers
 - **LIME submodule**: Placeholder for future LIME integration
 - Modular design allows easy addition of new explainer types
+- **Focus**: Global model interpretation and visualization
+
+#### Predictors Module (`mlexplainer/predictors/`) (NEW)
+- Contains predictor implementations for single-observation inference
+- Complements explainers by providing production-ready prediction API
+- Auto-detects features and types from trained models
+- Supports raw data input (JSON, dict, DataFrame)
+- Optional preprocessing pipeline integration
+- Returns structured JSON-serializable results
+- **Focus**: Production inference with SHAP explanations
 
 #### Utils Module (`mlexplainer/utils/`)
 - **`data_processing.py`**: Data transformation and preprocessing utilities
@@ -355,6 +410,75 @@ mlexplainer/
 - **`target_plots.py`**: Plots for feature-target relationships
 - **`shap_plots.py`**: SHAP-specific visualizations (beeswarm, waterfall, etc.)
 - Integrated with explainer classes for seamless plotting
+
+## Usage Examples
+
+### Explainers vs Predictors
+
+**Explainers** are for **global model analysis** on datasets:
+```python
+from mlexplainer import BinaryMLExplainer
+
+# Analyze model behavior on entire dataset
+explainer = BinaryMLExplainer(
+    x_train=x_train,  # Full training dataset
+    y_train=y_train,  # Full training labels
+    features=['age', 'income', 'education'],
+    model=xgb_model
+)
+
+# Generate global insights and visualizations
+explainer.explain()  # Creates plots and analysis for all features
+correctness = explainer.correctness_features()  # Validate interpretations
+```
+
+**Predictors** are for **single-observation inference** in production:
+```python
+from mlexplainer import BinaryMLPredictor
+
+# Make predictions with SHAP explanations
+predictor = BinaryMLPredictor(
+    model=xgb_model,
+    x_train=x_train,  # For SHAP TreeExplainer initialization
+    pipeline=preprocessing_pipeline  # Optional: for raw data preprocessing
+)
+
+# Predict on single observation (dict, JSON, or DataFrame)
+observation = {
+    'age': 35,
+    'income': 50000,
+    'education': 'Bachelor'
+}
+
+result = predictor.predict_with_contributions(observation)
+# Returns:
+# {
+#     'prediction': 0.78,  # Probability
+#     'base_value': 0.42,  # Model baseline
+#     'contributions': {
+#         'age': 0.15,
+#         'income': 0.21,
+#         'education': 0.03
+#     },
+#     'contributions_pct': {
+#         'age': 41.7,  # % of total contribution
+#         'income': 58.3,
+#         'education': 8.3
+#     },
+#     'contributions_cumsum': 0.78
+# }
+```
+
+### Key Differences
+
+| Aspect | Explainers | Predictors |
+|--------|-----------|-----------|
+| **Use Case** | Model analysis & debugging | Production inference |
+| **Input** | Full dataset (x_train, y_train) | Single observation (dict/JSON) |
+| **Output** | Visualizations & global insights | Structured dict (JSON-serializable) |
+| **Features** | Must be explicitly provided | Auto-detected from model |
+| **Pipeline** | Not supported | Optional preprocessing pipeline |
+| **Focus** | Understanding model globally | Explaining individual predictions |
 
 ## Data Flow
 

@@ -51,3 +51,4 @@ class ShapWrapper:
             dataframe[features]
         )
         return shap_values
+

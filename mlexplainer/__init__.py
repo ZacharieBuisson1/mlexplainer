@@ -3,7 +3,7 @@
 from os import path
 
 # Core abstractions
-from .core import BaseMLExplainer
+from .core import BaseMLExplainer, BaseMLPredictor
 
 # SHAP explainers and utilities
 from .explainers.shap import (
@@ -12,11 +12,20 @@ from .explainers.shap import (
     MultilabelMLExplainer,
 )
 
+# Predictors for inference with SHAP contributions
+from .predictors import (
+    BinaryMLPredictor,
+    MultilabelMLPredictor,
+)
+
 ROOT_DIR_MODULE = path.dirname(__file__)
 
 __all__ = [
     "BaseMLExplainer",
+    "BaseMLPredictor",
     "ShapWrapper",
     "BinaryMLExplainer",
     "MultilabelMLExplainer",
+    "BinaryMLPredictor",
+    "MultilabelMLPredictor",
 ]
