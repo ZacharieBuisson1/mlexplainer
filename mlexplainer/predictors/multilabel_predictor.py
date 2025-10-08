@@ -66,12 +66,13 @@ class MultilabelMLPredictor(BaseMLPredictor):
         Args:
             observation (Union[DataFrame, Dict[str, Any]]): A single observation.
                 Can be a dict (e.g., from JSON) or a single-row DataFrame.
-            **kwargs (Any): Additional keyword arguments (unused, for compatibility).
+            **kwargs (Any): Additional keyword arguments:
+                - decimals (int): Number of decimal places to round SHAP contributions (default: 4)
 
         Returns:
             Dict[str, Dict[str, Any]]: Dictionary with label names as keys, each containing:
                 - 'prediction': Predicted probability for the label (float)
-                - 'contributions': Dict mapping feature names to SHAP contributions
+                - 'contributions': Dict mapping feature names to SHAP contributions (rounded)
                 - 'values_before_processing': Dict with raw input values
                 - 'values_after_processing': Dict with processed values
 
@@ -80,16 +81,19 @@ class MultilabelMLPredictor(BaseMLPredictor):
             >>> {
             ...     'label_A': {
             ...         'prediction': 0.78,
-            ...         'contributions': {'age': 0.15, 'income': 0.21}
+            ...         'contributions': {'age': 0.1500, 'income': 0.2100}
             ...     },
             ...     'label_B': {
             ...         'prediction': 0.42,
-            ...         'contributions': {'age': -0.05, 'income': 0.10}
+            ...         'contributions': {'age': -0.0500, 'income': 0.1000}
             ...     },
             ...     'values_before_processing': {'age': 35, 'income': 50000},
             ...     'values_after_processing': {'age': 35, 'income': 50000}
             ... }
         """
+        # Get rounding precision from kwargs (default: 4 decimals)
+        decimals = kwargs.get("decimals", 4)
+
         # Prepare observation (handle dict/DataFrame, apply pipeline, convert types)
         observation_processed, values_before, values_after = self._prepare_observation(observation)
 
@@ -167,10 +171,14 @@ class MultilabelMLPredictor(BaseMLPredictor):
             prediction_label = predictions_array[i]
 
             # Build contributions dictionary
-            contributions = {
-                feature: float(shap_values_label[j])
-                for j, feature in enumerate(self.features)
-            }
+            # Ensure feature names are Python strings (not np.str_) and values are rounded
+            contributions = {}
+            for j, feature in enumerate(self.features):
+                # Convert feature name to Python string
+                feature_name = str(feature)
+                # Extract and round SHAP value
+                value = float(shap_values_label[j])
+                contributions[feature_name] = round(value, decimals)
 
             results[label_name] = {
                 "prediction": float(prediction_label),

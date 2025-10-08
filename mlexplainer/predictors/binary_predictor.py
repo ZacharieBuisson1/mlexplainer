@@ -58,12 +58,13 @@ class BinaryMLPredictor(BaseMLPredictor):
         Args:
             observation (Union[DataFrame, Dict[str, Any]]): A single observation.
                 Can be a dict (e.g., from JSON) or a single-row DataFrame.
-            **kwargs (Any): Additional keyword arguments (unused, for compatibility).
+            **kwargs (Any): Additional keyword arguments:
+                - decimals (int): Number of decimal places to round SHAP contributions (default: 4)
 
         Returns:
             Dict[str, Any]: Dictionary containing:
                 - 'prediction': Predicted probability for positive class (float)
-                - 'contributions': Dict mapping feature names to SHAP contributions
+                - 'contributions': Dict mapping feature names to SHAP contributions (rounded)
                 - 'values_before_processing': Dict with raw input values
                 - 'values_after_processing': Dict with processed values
 
@@ -71,11 +72,14 @@ class BinaryMLPredictor(BaseMLPredictor):
             >>> result = predictor.predict_with_contributions({'age': 35, 'income': 50000})
             >>> {
             ...     'prediction': 0.78,
-            ...     'contributions': {'age': 0.15, 'income': 0.21, ...},
+            ...     'contributions': {'age': 0.1500, 'income': 0.2100, ...},
             ...     'values_before_processing': {'age': 35, 'income': 50000},
             ...     'values_after_processing': {'age': 35, 'income': 50000}
             ... }
         """
+        # Get rounding precision from kwargs (default: 4 decimals)
+        decimals = kwargs.get("decimals", 4)
+
         # Prepare observation (handle dict/DataFrame, apply pipeline, convert types)
         observation_processed, values_before, values_after = self._prepare_observation(observation)
 
@@ -98,15 +102,21 @@ class BinaryMLPredictor(BaseMLPredictor):
             shap_values_single = shap_values[0]  # First observation
 
         # Build contributions dictionary
-        # Ensure each value is a scalar by using np.asarray().item() if needed
+        # Ensure feature names are Python strings (not np.str_) and values are rounded
         contributions = {}
         for i, feature in enumerate(self.features):
+            # Convert feature name to Python string
+            feature_name = str(feature)
+
+            # Extract scalar value from SHAP values
             value = shap_values_single[i]
-            # If value is still an array, extract the scalar
             if isinstance(value, np.ndarray):
-                contributions[feature] = float(value.item()) if value.size == 1 else float(value.flat[0])
+                value = float(value.item()) if value.size == 1 else float(value.flat[0])
             else:
-                contributions[feature] = float(value)
+                value = float(value)
+
+            # Round to specified decimals
+            contributions[feature_name] = round(value, decimals)
 
         return {
             "prediction": float(prediction),
