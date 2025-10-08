@@ -241,8 +241,8 @@ class BaseMLPredictor(ABC):
         Returns:
             tuple: A tuple containing:
                 - DataFrame: Processed observation ready for prediction (1 row)
-                - Dict[str, Any]: Values before processing
-                - Dict[str, Any]: Values after processing
+                - Dict[str, Any]: Values before processing (all input columns)
+                - Dict[str, Any]: Values after processing (only model features used for prediction)
 
         Raises:
             ValueError: If observation format is invalid or transformation fails.
@@ -262,7 +262,7 @@ class BaseMLPredictor(ABC):
                 f"observation must contain exactly 1 row, got {len(observation)} rows."
             )
 
-        # Store values before processing (convert to regular dict with Python native types)
+        # Store values before processing - ALL input columns (convert to regular dict with Python native types)
         values_before = {
             col: observation[col].iloc[0].item()
             if hasattr(observation[col].iloc[0], 'item')
@@ -295,12 +295,14 @@ class BaseMLPredictor(ABC):
         # Validate features in processed observation
         self._validate_observation(observation_processed)
 
-        # Store values after processing (convert to regular dict with Python native types)
+        # Store values after processing - ONLY model features (convert to regular dict with Python native types)
+        # This filters out any intermediate columns created during preprocessing
         values_after = {
             col: observation_processed[col].iloc[0].item()
             if hasattr(observation_processed[col].iloc[0], 'item')
             else observation_processed[col].iloc[0]
-            for col in observation_processed.columns
+            for col in self.features
+            if col in observation_processed.columns
         }
 
         return observation_processed, values_before, values_after
