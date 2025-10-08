@@ -72,6 +72,8 @@ class MultilabelMLPredictor(BaseMLPredictor):
             Dict[str, Dict[str, Any]]: Dictionary with label names as keys, each containing:
                 - 'prediction': Predicted probability for the label (float)
                 - 'contributions': Dict mapping feature names to SHAP contributions
+                - 'values_before_processing': Dict with raw input values
+                - 'values_after_processing': Dict with processed values
 
         Example:
             >>> result = predictor.predict_with_contributions({'age': 35, 'income': 50000})
@@ -84,11 +86,12 @@ class MultilabelMLPredictor(BaseMLPredictor):
             ...         'prediction': 0.42,
             ...         'contributions': {'age': -0.05, 'income': 0.10}
             ...     },
-            ...     ...
+            ...     'values_before_processing': {'age': 35, 'income': 50000},
+            ...     'values_after_processing': {'age': 35, 'income': 50000}
             ... }
         """
         # Prepare observation (handle dict/DataFrame, apply pipeline, convert types)
-        observation_processed = self._prepare_observation(observation)
+        observation_processed, values_before, values_after = self._prepare_observation(observation)
 
         # Calculate SHAP values using standard calculate method
         shap_values = self.shap_wrapper.calculate(
@@ -173,5 +176,9 @@ class MultilabelMLPredictor(BaseMLPredictor):
                 "prediction": float(prediction_label),
                 "contributions": contributions,
             }
+
+        # Add processing values at the root level (not per label)
+        results["values_before_processing"] = values_before
+        results["values_after_processing"] = values_after
 
         return results

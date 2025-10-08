@@ -58,6 +58,8 @@ class TestBinaryPredictorXGBoost(unittest.TestCase):
         # Check structure
         self.assertIn("prediction", result)
         self.assertIn("contributions", result)
+        self.assertIn("values_before_processing", result)
+        self.assertIn("values_after_processing", result)
 
         # Check prediction bounds
         self.assertGreaterEqual(result["prediction"], 0.0)
@@ -111,6 +113,8 @@ class TestBinaryPredictorLightGBM(unittest.TestCase):
         # Check structure
         self.assertIn("prediction", result)
         self.assertIn("contributions", result)
+        self.assertIn("values_before_processing", result)
+        self.assertIn("values_after_processing", result)
 
         # Check prediction bounds
         self.assertGreaterEqual(result["prediction"], 0.0)
@@ -165,6 +169,8 @@ class TestBinaryPredictorCatBoost(unittest.TestCase):
         # Check structure
         self.assertIn("prediction", result)
         self.assertIn("contributions", result)
+        self.assertIn("values_before_processing", result)
+        self.assertIn("values_after_processing", result)
 
         # Check prediction bounds
         self.assertGreaterEqual(result["prediction"], 0.0)
@@ -211,6 +217,8 @@ class TestBinaryPredictorRandomForest(unittest.TestCase):
         # Check structure
         self.assertIn("prediction", result)
         self.assertIn("contributions", result)
+        self.assertIn("values_before_processing", result)
+        self.assertIn("values_after_processing", result)
 
         # Check prediction bounds
         self.assertGreaterEqual(result["prediction"], 0.0)
@@ -257,6 +265,8 @@ class TestBinaryPredictorGradientBoosting(unittest.TestCase):
         # Check structure
         self.assertIn("prediction", result)
         self.assertIn("contributions", result)
+        self.assertIn("values_before_processing", result)
+        self.assertIn("values_after_processing", result)
 
         # Check prediction bounds
         self.assertGreaterEqual(result["prediction"], 0.0)

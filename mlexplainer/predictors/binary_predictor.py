@@ -64,16 +64,20 @@ class BinaryMLPredictor(BaseMLPredictor):
             Dict[str, Any]: Dictionary containing:
                 - 'prediction': Predicted probability for positive class (float)
                 - 'contributions': Dict mapping feature names to SHAP contributions
+                - 'values_before_processing': Dict with raw input values
+                - 'values_after_processing': Dict with processed values
 
         Example:
             >>> result = predictor.predict_with_contributions({'age': 35, 'income': 50000})
             >>> {
             ...     'prediction': 0.78,
-            ...     'contributions': {'age': 0.15, 'income': 0.21, ...}
+            ...     'contributions': {'age': 0.15, 'income': 0.21, ...},
+            ...     'values_before_processing': {'age': 35, 'income': 50000},
+            ...     'values_after_processing': {'age': 35, 'income': 50000}
             ... }
         """
         # Prepare observation (handle dict/DataFrame, apply pipeline, convert types)
-        observation_processed = self._prepare_observation(observation)
+        observation_processed, values_before, values_after = self._prepare_observation(observation)
 
         # Calculate SHAP values using standard calculate method
         shap_values = self.shap_wrapper.calculate(
@@ -107,4 +111,6 @@ class BinaryMLPredictor(BaseMLPredictor):
         return {
             "prediction": float(prediction),
             "contributions": contributions,
+            "values_before_processing": values_before,
+            "values_after_processing": values_after,
         }

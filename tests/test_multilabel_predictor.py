@@ -60,12 +60,16 @@ class TestMultilabelPredictorXGBoost(unittest.TestCase):
         observation = {"age": 35, "income": 50000, "score": 0.75}
         result = predictor.predict_with_contributions(observation)
 
-        # Check result is dict with label names as keys
+        # Check result is dict with label names as keys + processing values
         self.assertIsInstance(result, dict)
-        self.assertEqual(len(result), 3)
+        self.assertEqual(len(result), 5)  # 3 labels + 2 processing values
         self.assertIn("Class_A", result)
         self.assertIn("Class_B", result)
         self.assertIn("Class_C", result)
+
+        # Check processing values at root level
+        self.assertIn("values_before_processing", result)
+        self.assertIn("values_after_processing", result)
 
         # Check structure for each label
         for label_name in self.label_names:
@@ -144,7 +148,7 @@ class TestMultilabelPredictorLightGBM(unittest.TestCase):
         result = predictor.predict_with_contributions(observation)
 
         # Check result structure
-        self.assertEqual(len(result), 3)
+        self.assertEqual(len(result), 5)  # n_labels + 2 processing values
         for label_name in self.label_names:
             self.assertIn(label_name, result)
             self.assertIn("prediction", result[label_name])
@@ -201,7 +205,7 @@ class TestMultilabelPredictorCatBoost(unittest.TestCase):
         result = predictor.predict_with_contributions(observation)
 
         # Check result structure
-        self.assertEqual(len(result), 3)
+        self.assertEqual(len(result), 5)  # n_labels + 2 processing values
         for label_name in self.label_names:
             self.assertIn(label_name, result)
             self.assertIn("prediction", result[label_name])
@@ -251,7 +255,7 @@ class TestMultilabelPredictorRandomForest(unittest.TestCase):
         result = predictor.predict_with_contributions(observation)
 
         # Check result structure
-        self.assertEqual(len(result), 4)
+        self.assertEqual(len(result), 6)  # 4 labels + 2 processing values
         for label_name in self.label_names:
             self.assertIn(label_name, result)
             self.assertIn("prediction", result[label_name])

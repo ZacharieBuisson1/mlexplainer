@@ -226,7 +226,7 @@ class BaseMLPredictor(ABC):
 
     def _prepare_observation(
         self, observation: Union[DataFrame, Dict[str, Any]]
-    ) -> DataFrame:
+    ) -> tuple[DataFrame, Dict[str, Any], Dict[str, Any]]:
         """Prepare and validate observation data for prediction.
 
         This method:
@@ -239,7 +239,10 @@ class BaseMLPredictor(ABC):
             observation (Union[DataFrame, Dict[str, Any]]): Raw observation data.
 
         Returns:
-            DataFrame: Processed observation ready for prediction (1 row).
+            tuple: A tuple containing:
+                - DataFrame: Processed observation ready for prediction (1 row)
+                - Dict[str, Any]: Values before processing
+                - Dict[str, Any]: Values after processing
 
         Raises:
             ValueError: If observation format is invalid or transformation fails.
@@ -258,6 +261,14 @@ class BaseMLPredictor(ABC):
             raise ValueError(
                 f"observation must contain exactly 1 row, got {len(observation)} rows."
             )
+
+        # Store values before processing (convert to regular dict with Python native types)
+        values_before = {
+            col: observation[col].iloc[0].item()
+            if hasattr(observation[col].iloc[0], 'item')
+            else observation[col].iloc[0]
+            for col in observation.columns
+        }
 
         # Apply pipeline transformation if provided
         if self.pipeline is not None:
@@ -284,7 +295,15 @@ class BaseMLPredictor(ABC):
         # Validate features in processed observation
         self._validate_observation(observation_processed)
 
-        return observation_processed
+        # Store values after processing (convert to regular dict with Python native types)
+        values_after = {
+            col: observation_processed[col].iloc[0].item()
+            if hasattr(observation_processed[col].iloc[0], 'item')
+            else observation_processed[col].iloc[0]
+            for col in observation_processed.columns
+        }
+
+        return observation_processed, values_before, values_after
 
     def _convert_categorical_features(self, observation: DataFrame) -> DataFrame:
         """Convert categorical features to proper dtype based on model metadata.
