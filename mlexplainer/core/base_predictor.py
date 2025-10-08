@@ -263,8 +263,9 @@ class BaseMLPredictor(ABC):
             )
 
         # Store values before processing - ALL input columns (convert to regular dict with Python native types)
+        # Ensure keys are Python strings (not numpy.str_)
         values_before = {
-            col: observation[col].iloc[0].item()
+            str(col): observation[col].iloc[0].item()
             if hasattr(observation[col].iloc[0], 'item')
             else observation[col].iloc[0]
             for col in observation.columns
@@ -297,8 +298,9 @@ class BaseMLPredictor(ABC):
 
         # Store values after processing - ONLY model features (convert to regular dict with Python native types)
         # This filters out any intermediate columns created during preprocessing
+        # Ensure keys are Python strings (not numpy.str_)
         values_after = {
-            col: observation_processed[col].iloc[0].item()
+            str(col): observation_processed[col].iloc[0].item()
             if hasattr(observation_processed[col].iloc[0], 'item')
             else observation_processed[col].iloc[0]
             for col in self.features
