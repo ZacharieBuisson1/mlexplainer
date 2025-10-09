@@ -24,9 +24,11 @@ def main():
     **SHAP (SHapley Additive exPlanations)** values for model interpretation.
     
     ### Key Features
-    
+
     - **Binary Classification Explanations**: Detailed SHAP-based explanations for binary classification models
     - **Multilabel Classification Support**: Advanced explanations for multilabel classification tasks
+    - **Text Explanation Generation** ✨ NEW: Natural language explanations powered by SHAP + LLM/Templates
+    - **Single Observation Predictions**: BinaryMLPredictor & MultilabelMLPredictor for production inference
     - **Feature Type Handling**: Automatic processing of numerical, categorical, and string features
     - **Visualization Tools**: Rich plotting capabilities for feature-target relationships and SHAP values
     - **Validation Framework**: Built-in interpretation consistency validation
@@ -41,40 +43,66 @@ def main():
     - `MultilabelMLExplainer`: Specialized explainer for multilabel classification
     
     ### What You Can Do in This Demo
-    
+
     This demonstration application showcases the key capabilities of MLExplainer:
-    
-    1. **Binary Classification Demo**: 
+
+    **📊 Classic Explainers (Global Model Analysis)**
+
+    1. **Binary Classification Demo**:
        - Load sample data for binary classification
        - Train a model and generate SHAP explanations
        - Visualize global feature importance
        - Explore numerical and categorical feature relationships
        - Validate interpretation consistency
-    
+
     2. **Multilabel Classification Demo**:
        - Work with multilabel classification datasets
        - Generate SHAP explanations for multiple classes
        - Visualize class-specific feature importance
        - Analyze feature behavior across different labels
+
+    **💬 Text Explanations (Single Observation Inference)** ✨ NEW
+
+    3. **Binary Text Explanation Demo**:
+       - Make predictions on individual observations
+       - Get SHAP contribution values for each feature
+       - Generate natural language explanations (French/English)
+       - Choose between Template mode (fast) or LLM mode (intelligent)
+       - Understand which features drove a specific prediction
+
+    4. **Multilabel Text Explanation Demo**:
+       - Predict probabilities across multiple classes for one observation
+       - Get per-label SHAP contributions and text explanations
+       - Compare feature importance across different labels
+       - Ideal for production inference with explanations
     
     ### Getting Started
-    
+
     Use the sidebar navigation to explore:
+
+    **Classic Explainers (Global Analysis):**
     - **Binary Classification**: Interactive demo with sample binary classification data
     - **Multilabel Classification**: Interactive demo with sample multilabel data
-    
+
+    **Text Explanations (Inference):** ✨ NEW
+    - **Binary Text Explanation**: Make predictions with natural language explanations
+    - **Multilabel Text Explanation**: Multi-class predictions with per-label explanations
+
     Each demo page allows you to:
     - Load and explore sample datasets
-    - Configure model parameters
-    - Generate and visualize explanations
-    - Download results and visualizations
+    - Train models (XGBoost)
+    - Generate SHAP-based explanations
+    - (Text demos) Get natural language explanations for individual predictions
+    - Visualize results interactively
     """
     )
 
     st.info(
         """
-    💡 **Tip**: Start with the Binary Classification demo to get familiar with the basic concepts, 
-    then explore the Multilabel Classification demo for more advanced use cases.
+    💡 **Tips**:
+    - **New users**: Start with Binary Classification to understand SHAP basics
+    - **Production use cases**: Check out Binary/Multilabel Text Explanation demos for inference
+    - **Advanced users**: Explore Multilabel Classification for complex scenarios
     """
     )
 
