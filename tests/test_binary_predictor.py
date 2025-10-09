@@ -435,13 +435,16 @@ class TestBinaryPredictorTextExplanation(unittest.TestCase):
         self.assertIn("mode must be 'llm' or 'template'", str(context.exception))
 
     def test_predict_with_text_explanation_default_parameters(self):
-        """Test prediction with default parameters."""
+        """Test prediction with default parameters (template mode for CI compatibility)."""
         predictor = BinaryMLPredictor(self.model, self.x_train)
 
         observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
-        result = predictor.predict_with_text_explanation(observation=observation)
+        # Use template mode to avoid LLM model download in CI
+        result = predictor.predict_with_text_explanation(
+            observation=observation, mode="template"
+        )
 
-        # Should use default mode='llm', language='fr', top_n=3
+        # Should have explanation_text and top_features (default top_n=3)
         self.assertIn("explanation_text", result)
         self.assertIn("top_features", result)
         self.assertLessEqual(len(result["top_features"]), 3)

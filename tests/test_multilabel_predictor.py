@@ -479,15 +479,18 @@ class TestMultilabelPredictorTextExplanation(unittest.TestCase):
         self.assertIn("mode must be 'llm' or 'template'", str(context.exception))
 
     def test_predict_with_text_explanation_default_parameters(self):
-        """Test prediction with default parameters."""
+        """Test prediction with default parameters (template mode for CI compatibility)."""
         predictor = MultilabelMLPredictor(
             self.model, self.x_train, label_names=self.label_names
         )
 
         observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
-        result = predictor.predict_with_text_explanation(observation=observation)
+        # Use template mode to avoid LLM model download in CI
+        result = predictor.predict_with_text_explanation(
+            observation=observation, mode="template"
+        )
 
-        # Should use default mode='llm', language='fr', top_n=3
+        # Should have explanation_text and top_features (default top_n=3)
         for label_name in self.label_names:
             self.assertIn("explanation_text", result[label_name])
             self.assertIn("top_features", result[label_name])
