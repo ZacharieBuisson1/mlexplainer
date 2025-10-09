@@ -36,6 +36,18 @@ sphinx-rtd-theme = "^3.0.2"
 sphinx-autodoc-typehints = "^2.5.0"
 streamlit = "^1.48.0"
 
+[tool.poetry.group.llm]
+optional = true
+
+[tool.poetry.group.llm.dependencies]
+transformers = "^4.45.0"
+torch = "^2.4.0"
+accelerate = "^1.1.0"
+bitsandbytes = "^0.45.0"
+
+[tool.poetry.extras]
+llm = ["transformers", "torch", "accelerate", "bitsandbytes"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

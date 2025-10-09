@@ -2,5 +2,6 @@
 
 from .base_explainer import BaseMLExplainer
 from .base_predictor import BaseMLPredictor
+from .base_text_explainer import BaseTextExplainer
 
-__all__ = ["BaseMLExplainer", "BaseMLPredictor"]
+__all__ = ["BaseMLExplainer", "BaseMLPredictor", "BaseTextExplainer"]
