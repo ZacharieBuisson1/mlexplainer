@@ -387,11 +387,10 @@ def main():
                                 )
 
                             st.markdown("**All SHAP Contributions:**")
-                            contributions_df = st.session_state[
-                                "text_train"
-                            ].iloc[:1].copy()
-                            contributions_df.loc[0] = list(
-                                result["contributions"].values()
+                            import pandas as pd
+                            contributions_df = pd.DataFrame(
+                                [result["contributions"]],
+                                columns=result["contributions"].keys()
                             )
                             st.dataframe(contributions_df)
 
