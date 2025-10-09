@@ -333,5 +333,164 @@ class TestBinaryPredictorInputValidation(unittest.TestCase):
         self.assertIn("missing required features", str(context.exception))
 
 
+class TestBinaryPredictorTextExplanation(unittest.TestCase):
+    """Test suite for predict_with_text_explanation method."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        np.random.seed(42)
+        self.x_train = pd.DataFrame(
+            {
+                "age": np.random.randint(18, 80, 100),
+                "income": np.random.randint(20000, 100000, 100),
+                "NumOfProducts": np.random.randint(1, 5, 100),
+            }
+        )
+
+        y_train = np.random.randint(0, 2, 100)
+        self.model = XGBClassifier(random_state=42, n_estimators=10)
+        self.model.fit(self.x_train, y_train)
+
+    def test_predict_with_text_explanation_template_mode(self):
+        """Test prediction with template-based text explanation."""
+        predictor = BinaryMLPredictor(self.model, self.x_train)
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+        result = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+            top_n=2,
+            language="fr",
+            target_name="churn",
+        )
+
+        # Check all expected keys
+        self.assertIn("prediction", result)
+        self.assertIn("contributions", result)
+        self.assertIn("values_before_processing", result)
+        self.assertIn("values_after_processing", result)
+        self.assertIn("explanation_text", result)
+        self.assertIn("top_features", result)
+
+        # Check explanation text is not empty
+        self.assertIsInstance(result["explanation_text"], str)
+        self.assertGreater(len(result["explanation_text"]), 0)
+
+        # Check top_features structure
+        self.assertIsInstance(result["top_features"], list)
+        self.assertLessEqual(len(result["top_features"]), 2)
+        if len(result["top_features"]) > 0:
+            self.assertIn("name", result["top_features"][0])
+            self.assertIn("value", result["top_features"][0])
+            self.assertIn("contribution", result["top_features"][0])
+            self.assertIn("impact", result["top_features"][0])
+
+    def test_predict_with_text_explanation_english(self):
+        """Test prediction with English template explanation."""
+        predictor = BinaryMLPredictor(self.model, self.x_train)
+
+        observation = {"age": 45, "income": 70000, "NumOfProducts": 3}
+        result = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+            language="en",
+            target_name="retention",
+        )
+
+        # Check explanation is in English
+        explanation = result["explanation_text"]
+        self.assertIn("probability", explanation.lower())
+
+    def test_predict_with_text_explanation_with_feature_mapping(self):
+        """Test prediction with feature name mapping."""
+        predictor = BinaryMLPredictor(self.model, self.x_train)
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+        feature_mapping = {"NumOfProducts": "nombre de produits", "age": "âge"}
+
+        result = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+            language="fr",
+            target_name="churn",
+            feature_name_mapping=feature_mapping,
+        )
+
+        # Check mapped names appear in explanation (if those features are in top_n)
+        explanation = result["explanation_text"]
+        self.assertIsInstance(explanation, str)
+
+    def test_predict_with_text_explanation_invalid_mode(self):
+        """Test that invalid mode raises ValueError."""
+        predictor = BinaryMLPredictor(self.model, self.x_train)
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+
+        with self.assertRaises(ValueError) as context:
+            predictor.predict_with_text_explanation(
+                observation=observation,
+                mode="invalid_mode",
+            )
+
+        self.assertIn("mode must be 'llm' or 'template'", str(context.exception))
+
+    def test_predict_with_text_explanation_default_parameters(self):
+        """Test prediction with default parameters (template mode for CI compatibility)."""
+        predictor = BinaryMLPredictor(self.model, self.x_train)
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+        # Use template mode to avoid LLM model download in CI
+        result = predictor.predict_with_text_explanation(
+            observation=observation, mode="template"
+        )
+
+        # Should have explanation_text and top_features (default top_n=3)
+        self.assertIn("explanation_text", result)
+        self.assertIn("top_features", result)
+        self.assertLessEqual(len(result["top_features"]), 3)
+
+    def test_predict_with_text_explanation_top_n_variation(self):
+        """Test prediction with different top_n values."""
+        predictor = BinaryMLPredictor(self.model, self.x_train)
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+
+        # Test top_n=1
+        result_1 = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+            top_n=1,
+        )
+        self.assertEqual(len(result_1["top_features"]), 1)
+
+        # Test top_n=3
+        result_3 = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+            top_n=3,
+        )
+        self.assertLessEqual(len(result_3["top_features"]), 3)
+
+    def test_predict_with_text_explanation_preserves_base_result(self):
+        """Test that text explanation preserves base prediction result."""
+        predictor = BinaryMLPredictor(self.model, self.x_train)
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+
+        base_result = predictor.predict_with_contributions(observation)
+        text_result = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+        )
+
+        # Check base fields are identical
+        self.assertEqual(base_result["prediction"], text_result["prediction"])
+        self.assertEqual(base_result["contributions"], text_result["contributions"])
+        self.assertEqual(
+            base_result["values_before_processing"],
+            text_result["values_before_processing"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

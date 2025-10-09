@@ -190,3 +190,106 @@ class MultilabelMLPredictor(BaseMLPredictor):
         results["values_after_processing"] = values_after
 
         return results
+
+    def predict_with_text_explanation(
+        self,
+        observation: Union[DataFrame, Dict[str, Any]],
+        mode: str = "llm",
+        top_n: int = 3,
+        language: str = "fr",
+        feature_name_mapping: Optional[Dict[str, str]] = None,
+        **kwargs: Any
+    ) -> Dict[str, Dict[str, Any]]:
+        """Make predictions with SHAP contributions and natural language explanations.
+
+        This method extends predict_with_contributions() by adding natural language
+        explanations for each label using either LLM-based or template-based generation.
+
+        Args:
+            observation (Union[DataFrame, Dict[str, Any]]): A single observation.
+                Can be a dict (e.g., from JSON) or a single-row DataFrame.
+            mode (str): Text generation mode ('llm' or 'template'). Default: 'llm'.
+            top_n (int): Number of top contributing features per label. Default: 3.
+            language (str): Language for explanations ('fr' or 'en'). Default: 'fr'.
+            feature_name_mapping (Optional[Dict[str, str]]): Mapping from technical
+                feature names to human-readable names (template mode only). Example:
+                {'NumOfProducts': 'nombre de produits', 'Age': 'âge'}
+            **kwargs (Any): Additional keyword arguments:
+                - decimals (int): Number of decimal places for SHAP contributions (default: 4)
+                - max_new_tokens (int): LLM max tokens (default: 300, LLM mode only)
+                - temperature (float): LLM sampling temperature (default: 0.3, LLM mode only)
+
+        Returns:
+            Dict[str, Dict[str, Any]]: Dictionary with label names as keys, each containing:
+                - 'prediction': Predicted probability for the label (float)
+                - 'contributions': Dict mapping feature names to SHAP contributions
+                - 'explanation_text': Natural language explanation (str)
+                - 'top_features': List of top N features (list of dicts)
+                Plus shared keys at root level:
+                - 'values_before_processing': Dict with raw input values
+                - 'values_after_processing': Dict with processed values
+
+        Example:
+            >>> result = predictor.predict_with_text_explanation(
+            ...     observation={'Age': 42, 'NumOfProducts': 1},
+            ...     mode='llm',
+            ...     top_n=3,
+            ...     language='fr'
+            ... )
+            >>> print(result['label_A']['explanation_text'])
+            La probabilité de label_A est de 75%. Cette prédiction s'explique
+            principalement par...
+
+        Raises:
+            ValueError: If mode is not 'llm' or 'template'.
+            ImportError: If LLM mode is used but transformers/torch are not installed.
+        """
+        # Validate mode
+        if mode not in ["llm", "template"]:
+            raise ValueError(f"mode must be 'llm' or 'template', got: {mode}")
+
+        # Get base predictions with contributions
+        result = self.predict_with_contributions(observation, **kwargs)
+
+        # Initialize text explainer based on mode
+        if mode == "llm":
+            from mlexplainer.interpretation import TextExplainerLLM
+
+            text_explainer = TextExplainerLLM(language=language)
+        else:  # template mode
+            from mlexplainer.interpretation import TextExplainerTemplate
+
+            text_explainer = TextExplainerTemplate(
+                language=language, feature_name_mapping=feature_name_mapping
+            )
+
+        # Extract values (shared across all labels)
+        values_before = result.pop("values_before_processing")
+        values_after = result.pop("values_after_processing")
+
+        # Generate explanation for each label
+        for label_name, label_data in result.items():
+            # Extract top features for this label
+            top_features = text_explainer._extract_top_features(
+                label_data["contributions"], values_after, top_n
+            )
+
+            # Generate explanation text
+            explanation_text = text_explainer.generate_explanation(
+                prediction=label_data["prediction"],
+                contributions=label_data["contributions"],
+                values=values_after,
+                top_n=top_n,
+                target_name=label_name,
+                **kwargs
+            )
+
+            # Add to label data
+            label_data["explanation_text"] = explanation_text
+            label_data["top_features"] = top_features
+
+        # Add values back at root level
+        result["values_before_processing"] = values_before
+        result["values_after_processing"] = values_after
+
+        return result

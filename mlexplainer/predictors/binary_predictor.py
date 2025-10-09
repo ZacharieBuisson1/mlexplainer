@@ -124,3 +124,101 @@ class BinaryMLPredictor(BaseMLPredictor):
             "values_before_processing": values_before,
             "values_after_processing": values_after,
         }
+
+    def predict_with_text_explanation(
+        self,
+        observation: Union[DataFrame, Dict[str, Any]],
+        mode: str = "llm",
+        top_n: int = 3,
+        language: str = "fr",
+        target_name: Optional[str] = None,
+        feature_name_mapping: Optional[Dict[str, str]] = None,
+        **kwargs: Any
+    ) -> Dict[str, Any]:
+        """Make a prediction with SHAP contributions and natural language explanation.
+
+        This method extends predict_with_contributions() by adding a natural language
+        explanation of the prediction using either LLM-based or template-based generation.
+
+        Args:
+            observation (Union[DataFrame, Dict[str, Any]]): A single observation.
+                Can be a dict (e.g., from JSON) or a single-row DataFrame.
+            mode (str): Text generation mode ('llm' or 'template'). Default: 'llm'.
+            top_n (int): Number of top contributing features to include in explanation. Default: 3.
+            language (str): Language for explanation ('fr' or 'en'). Default: 'fr'.
+            target_name (Optional[str]): Human-readable name for the target variable.
+                Example: 'Exited', 'Churn', 'Default'. If None, uses 'positive class'.
+            feature_name_mapping (Optional[Dict[str, str]]): Mapping from technical
+                feature names to human-readable names (template mode only). Example:
+                {'NumOfProducts': 'nombre de produits', 'Age': 'âge'}
+            **kwargs (Any): Additional keyword arguments:
+                - decimals (int): Number of decimal places for SHAP contributions (default: 4)
+                - max_new_tokens (int): LLM max tokens (default: 300, LLM mode only)
+                - temperature (float): LLM sampling temperature (default: 0.3, LLM mode only)
+
+        Returns:
+            Dict[str, Any]: Dictionary containing:
+                - 'prediction': Predicted probability for positive class (float)
+                - 'contributions': Dict mapping feature names to SHAP contributions
+                - 'values_before_processing': Dict with raw input values
+                - 'values_after_processing': Dict with processed values
+                - 'explanation_text': Natural language explanation (str)
+                - 'top_features': List of top N features with their info (list of dicts)
+
+        Example:
+            >>> result = predictor.predict_with_text_explanation(
+            ...     observation={'Age': 42, 'NumOfProducts': 1, 'IsActiveMember': 1},
+            ...     mode='llm',
+            ...     top_n=3,
+            ...     language='fr',
+            ...     target_name='Exited'
+            ... )
+            >>> print(result['explanation_text'])
+            La probabilité de sortie (Exited) est de 38%. Cette prédiction s'explique
+            principalement par le nombre de produits (valeur: 1, contribution: +53%),
+            l'âge du client (valeur: 42 ans, contribution: +24%), et le statut de membre
+            actif (valeur: Oui, contribution: -48%).
+
+        Raises:
+            ValueError: If mode is not 'llm' or 'template'.
+            ImportError: If LLM mode is used but transformers/torch are not installed.
+        """
+        # Validate mode
+        if mode not in ["llm", "template"]:
+            raise ValueError(f"mode must be 'llm' or 'template', got: {mode}")
+
+        # Get base prediction with contributions
+        result = self.predict_with_contributions(observation, **kwargs)
+
+        # Initialize text explainer based on mode
+        if mode == "llm":
+            from mlexplainer.interpretation import TextExplainerLLM
+
+            text_explainer = TextExplainerLLM(language=language)
+        else:  # template mode
+            from mlexplainer.interpretation import TextExplainerTemplate
+
+            text_explainer = TextExplainerTemplate(
+                language=language, feature_name_mapping=feature_name_mapping
+            )
+
+        # Extract top features for metadata
+        top_features = text_explainer._extract_top_features(
+            result["contributions"], result["values_after_processing"], top_n
+        )
+
+        # Generate explanation text
+        explanation_text = text_explainer.generate_explanation(
+            prediction=result["prediction"],
+            contributions=result["contributions"],
+            values=result["values_after_processing"],
+            top_n=top_n,
+            target_name=target_name,
+            **kwargs
+        )
+
+        # Add text explanation and top features to result
+        result["explanation_text"] = explanation_text
+        result["top_features"] = top_features
+
+        return result
