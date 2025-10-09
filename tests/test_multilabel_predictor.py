@@ -368,5 +368,212 @@ class TestMultilabelPredictorInputValidation(unittest.TestCase):
         self.assertIn("does not match", str(context.exception))
 
 
+class TestMultilabelPredictorTextExplanation(unittest.TestCase):
+    """Test suite for predict_with_text_explanation method."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        np.random.seed(42)
+        self.x_train = pd.DataFrame(
+            {
+                "age": np.random.randint(18, 80, 100),
+                "income": np.random.randint(20000, 100000, 100),
+                "NumOfProducts": np.random.randint(1, 5, 100),
+            }
+        )
+
+        # Multiclass target (3 classes)
+        y_train = np.random.randint(0, 3, 100)
+        self.model = XGBClassifier(random_state=42, n_estimators=10)
+        self.model.fit(self.x_train, y_train)
+
+        self.label_names = ["Class_A", "Class_B", "Class_C"]
+
+    def test_predict_with_text_explanation_template_mode(self):
+        """Test prediction with template-based text explanation."""
+        predictor = MultilabelMLPredictor(
+            self.model, self.x_train, label_names=self.label_names
+        )
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+        result = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+            top_n=2,
+            language="fr",
+        )
+
+        # Check all expected top-level keys
+        self.assertIn("values_before_processing", result)
+        self.assertIn("values_after_processing", result)
+
+        # Check each label has explanation and top_features
+        for label_name in self.label_names:
+            self.assertIn(label_name, result)
+            self.assertIn("prediction", result[label_name])
+            self.assertIn("contributions", result[label_name])
+            self.assertIn("explanation_text", result[label_name])
+            self.assertIn("top_features", result[label_name])
+
+            # Check explanation text is not empty
+            self.assertIsInstance(result[label_name]["explanation_text"], str)
+            self.assertGreater(len(result[label_name]["explanation_text"]), 0)
+
+            # Check top_features structure
+            self.assertIsInstance(result[label_name]["top_features"], list)
+            self.assertLessEqual(len(result[label_name]["top_features"]), 2)
+
+    def test_predict_with_text_explanation_english(self):
+        """Test prediction with English template explanation."""
+        predictor = MultilabelMLPredictor(
+            self.model, self.x_train, label_names=self.label_names
+        )
+
+        observation = {"age": 45, "income": 70000, "NumOfProducts": 3}
+        result = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+            language="en",
+        )
+
+        # Check explanation is in English for each label
+        for label_name in self.label_names:
+            explanation = result[label_name]["explanation_text"]
+            self.assertIn("probability", explanation.lower())
+
+    def test_predict_with_text_explanation_with_feature_mapping(self):
+        """Test prediction with feature name mapping."""
+        predictor = MultilabelMLPredictor(
+            self.model, self.x_train, label_names=self.label_names
+        )
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+        feature_mapping = {"NumOfProducts": "nombre de produits", "age": "âge"}
+
+        result = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+            language="fr",
+            feature_name_mapping=feature_mapping,
+        )
+
+        # Check all labels have explanations
+        for label_name in self.label_names:
+            self.assertIn("explanation_text", result[label_name])
+            self.assertIsInstance(result[label_name]["explanation_text"], str)
+
+    def test_predict_with_text_explanation_invalid_mode(self):
+        """Test that invalid mode raises ValueError."""
+        predictor = MultilabelMLPredictor(
+            self.model, self.x_train, label_names=self.label_names
+        )
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+
+        with self.assertRaises(ValueError) as context:
+            predictor.predict_with_text_explanation(
+                observation=observation,
+                mode="invalid_mode",
+            )
+
+        self.assertIn("mode must be 'llm' or 'template'", str(context.exception))
+
+    def test_predict_with_text_explanation_default_parameters(self):
+        """Test prediction with default parameters."""
+        predictor = MultilabelMLPredictor(
+            self.model, self.x_train, label_names=self.label_names
+        )
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+        result = predictor.predict_with_text_explanation(observation=observation)
+
+        # Should use default mode='llm', language='fr', top_n=3
+        for label_name in self.label_names:
+            self.assertIn("explanation_text", result[label_name])
+            self.assertIn("top_features", result[label_name])
+            self.assertLessEqual(len(result[label_name]["top_features"]), 3)
+
+    def test_predict_with_text_explanation_top_n_variation(self):
+        """Test prediction with different top_n values."""
+        predictor = MultilabelMLPredictor(
+            self.model, self.x_train, label_names=self.label_names
+        )
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+
+        # Test top_n=1
+        result_1 = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+            top_n=1,
+        )
+        for label_name in self.label_names:
+            self.assertEqual(len(result_1[label_name]["top_features"]), 1)
+
+        # Test top_n=3
+        result_3 = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+            top_n=3,
+        )
+        for label_name in self.label_names:
+            self.assertLessEqual(len(result_3[label_name]["top_features"]), 3)
+
+    def test_predict_with_text_explanation_preserves_base_result(self):
+        """Test that text explanation preserves base prediction result."""
+        predictor = MultilabelMLPredictor(
+            self.model, self.x_train, label_names=self.label_names
+        )
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+
+        base_result = predictor.predict_with_contributions(observation)
+        text_result = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+        )
+
+        # Check base fields are identical for each label
+        for label_name in self.label_names:
+            self.assertEqual(
+                base_result[label_name]["prediction"],
+                text_result[label_name]["prediction"],
+            )
+            self.assertEqual(
+                base_result[label_name]["contributions"],
+                text_result[label_name]["contributions"],
+            )
+
+        # Check processing values are identical
+        self.assertEqual(
+            base_result["values_before_processing"],
+            text_result["values_before_processing"],
+        )
+        self.assertEqual(
+            base_result["values_after_processing"],
+            text_result["values_after_processing"],
+        )
+
+    def test_predict_with_text_explanation_auto_generated_labels(self):
+        """Test prediction without explicit label names (auto-generated)."""
+        predictor = MultilabelMLPredictor(self.model, self.x_train)
+
+        observation = {"age": 35, "income": 50000, "NumOfProducts": 2}
+        result = predictor.predict_with_text_explanation(
+            observation=observation,
+            mode="template",
+        )
+
+        # Should have auto-generated labels (label_0, label_1, label_2)
+        self.assertIn("label_0", result)
+        self.assertIn("label_1", result)
+        self.assertIn("label_2", result)
+
+        # Each should have explanation
+        for i in range(3):
+            label_key = f"label_{i}"
+            self.assertIn("explanation_text", result[label_key])
+
+
 if __name__ == "__main__":
     unittest.main()
