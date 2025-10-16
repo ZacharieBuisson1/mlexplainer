@@ -133,7 +133,7 @@ Remember: Your role is to orchestrate, not implement. You ensure the right speci
 
 **MLExplainer** is an advanced Machine Learning package dedicated to model interpretability, with a primary focus on leveraging Shapley values (SHAP) for explaining complex predictive models, particularly boosting algorithms for tabular data.
 
-- **Current Version**: 1.0.1
+- **Current Version**: 1.0.2
 - **License**: MIT
 - **Python Version**: ^3.11
 - **Package Repository**: [PyPI - mlexplainer](https://pypi.org/project/mlexplainer/)
