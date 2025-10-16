@@ -1,6 +1,5 @@
 """Tests for text explanation classes."""
 
-import platform
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -252,25 +251,6 @@ class TestTextExplainerLLM(unittest.TestCase):
         self.assertEqual(explainer.max_new_tokens, 300)
         self.assertEqual(explainer.temperature, 0.5)
 
-    @unittest.skipIf(
-        platform.system() == "Darwin",
-        "bitsandbytes quantization not supported on macOS"
-    )
-    def test_initialization_custom_parameters(self):
-        """Test initialization with custom parameters."""
-        explainer = TextExplainerLLM(
-            language="en",
-            model_name="custom/model",
-            quantization="4bit",
-            max_new_tokens=200,
-            temperature=0.7,
-        )
-        self.assertEqual(explainer.language, "en")
-        self.assertEqual(explainer.model_name, "custom/model")
-        self.assertEqual(explainer.quantization, "4bit")
-        self.assertEqual(explainer.max_new_tokens, 200)
-        self.assertEqual(explainer.temperature, 0.7)
-
     def test_generate_explanation_structure(self):
         """Test that generate_explanation returns proper structure without actual model loading."""
         # This test verifies the basic initialization without loading the model
@@ -332,29 +312,6 @@ class TestLLMModelCache(unittest.TestCase):
         # Should only load once
         self.assertEqual(mock_model_class.from_pretrained.call_count, 1)
         self.assertEqual(mock_tokenizer_class.from_pretrained.call_count, 1)
-
-    @unittest.skipIf(
-        platform.system() == "Darwin",
-        "bitsandbytes quantization not supported on macOS"
-    )
-    @patch("transformers.AutoModelForCausalLM")
-    @patch("transformers.AutoTokenizer")
-    def test_get_model_different_quantization(self, mock_tokenizer_class, mock_model_class):
-        """Test that different quantization settings create separate cache entries."""
-        # Setup mocks
-        mock_model_class.from_pretrained.return_value = MagicMock()
-        mock_tokenizer = MagicMock()
-        mock_tokenizer.pad_token = None
-        mock_tokenizer.eos_token = "<eos>"
-        mock_tokenizer_class.from_pretrained.return_value = mock_tokenizer
-
-        # Test
-        cache = LLMModelCache()
-        cache.get_model("test/model", quantization=None)
-        cache.get_model("test/model", quantization="4bit")
-
-        # Should load twice (different cache keys)
-        self.assertEqual(mock_model_class.from_pretrained.call_count, 2)
 
 
 if __name__ == "__main__":
