@@ -1,5 +1,6 @@
 """Tests for text explanation classes."""
 
+import platform
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -251,6 +252,10 @@ class TestTextExplainerLLM(unittest.TestCase):
         self.assertEqual(explainer.max_new_tokens, 300)
         self.assertEqual(explainer.temperature, 0.5)
 
+    @unittest.skipIf(
+        platform.system() == "Darwin",
+        "bitsandbytes quantization not supported on macOS"
+    )
     def test_initialization_custom_parameters(self):
         """Test initialization with custom parameters."""
         explainer = TextExplainerLLM(
@@ -328,6 +333,10 @@ class TestLLMModelCache(unittest.TestCase):
         self.assertEqual(mock_model_class.from_pretrained.call_count, 1)
         self.assertEqual(mock_tokenizer_class.from_pretrained.call_count, 1)
 
+    @unittest.skipIf(
+        platform.system() == "Darwin",
+        "bitsandbytes quantization not supported on macOS"
+    )
     @patch("transformers.AutoModelForCausalLM")
     @patch("transformers.AutoTokenizer")
     def test_get_model_different_quantization(self, mock_tokenizer_class, mock_model_class):
